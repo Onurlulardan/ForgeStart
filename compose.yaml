@@ -54,7 +54,7 @@ services:
       DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
-      REALTIME_URL: ${REALTIME_URL:-http://realtime:4000}
+      REALTIME_URL: ${DOCKER_REALTIME_URL:-http://realtime:4000}
     ports:
       - '${APP_PORT:-3000}:3000'
     volumes:
@@ -91,8 +91,8 @@ services:
       target: dev
     environment:
       AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
-      AUTH_URL: ${AUTH_URL:-http://app:3000}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://app:3000}
+      AUTH_URL: ${DOCKER_APP_URL:-http://app:3000}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       REALTIME_PORT: ${REALTIME_PORT:-4000}
       DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
     ports:
@@ -138,9 +138,13 @@ services:
       DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
-      REALTIME_URL: ${REALTIME_URL:-http://realtime:4000}
+      REALTIME_URL: ${DOCKER_REALTIME_URL:-http://realtime:4000}
     ports:
       - '${APP_PORT:-3000}:3000'
+    networks:
+      default:
+        aliases:
+          - app
     depends_on:
       migrate:
         condition: service_completed_successfully

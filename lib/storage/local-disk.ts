@@ -24,14 +24,18 @@ export class LocalDiskStorage implements StorageProvider {
   private readonly publicUrl: string;
 
   constructor(options: LocalDiskOptions) {
-    this.rootPath = path.resolve(process.cwd(), options.rootPath);
+    this.rootPath = path.resolve(
+      /* turbopackIgnore: true */ process.cwd(),
+      options.rootPath
+    );
     this.publicUrl = options.publicUrl;
   }
 
   private resolveKey(key: string): string {
     const safeKey = key.replace(/^\/+/, '').replaceAll('..', '');
     const target = path.resolve(this.rootPath, safeKey);
-    if (!target.startsWith(this.rootPath)) {
+    const relative = path.relative(this.rootPath, target);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
       throw new Error('Refusing to access path outside of storage root');
     }
     return target;
@@ -74,7 +78,8 @@ export class LocalDiskStorage implements StorageProvider {
   }
 
   private async cleanupEmptyDir(dir: string): Promise<void> {
-    if (dir === this.rootPath || !dir.startsWith(this.rootPath)) return;
+    const relative = path.relative(this.rootPath, dir);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return;
     try {
       const entries = await fs.readdir(dir);
       if (entries.length === 0) {

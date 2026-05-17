@@ -4026,12 +4026,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/nodemailer@npm:^8.0.0":
-  version: 8.0.0
-  resolution: "@types/nodemailer@npm:8.0.0"
+"@types/nodemailer@npm:^7.0.11":
+  version: 7.0.11
+  resolution: "@types/nodemailer@npm:7.0.11"
   dependencies:
     "@types/node": "npm:*"
-  checksum: 10c0/e5031df5d6557f4cdb9a0dbe1a96f3f54dc59c23d47477103fd42b5c9bc925ea1b4e51be560af5620b4d0c66fcfb015ce5ca8f914ed2f3a3086be6149d5932da
+  checksum: 10c0/dc6472c26600e763c38721b0691fc3014eb868d20b97eb48cfbc4fe9a7a09f66c0ccd8d647033a4be91051cc3c7bdca73c006db2f7a9e8bdd1ce65bb5ec2599c
   languageName: node
   linkType: hard
 
@@ -8927,7 +8927,7 @@ __metadata:
     "@types/jsonwebtoken": "npm:^9.0.10"
     "@types/mime-types": "npm:^3.0.1"
     "@types/node": "npm:^24.10.1"
-    "@types/nodemailer": "npm:^8.0.0"
+    "@types/nodemailer": "npm:^7.0.11"
     "@types/pg": "npm:^8.20.0"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
@@ -8956,7 +8956,7 @@ __metadata:
     next-auth: "npm:5.0.0-beta.31"
     next-intl: "npm:^4.12.0"
     next-themes: "npm:^0.4.6"
-    nodemailer: "npm:^8.0.7"
+    nodemailer: "npm:^7.0.13"
     pg: "npm:^8.20.0"
     postcss: "npm:^8"
     prettier: "npm:^3.4.2"
@@ -9048,10 +9048,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nodemailer@npm:^8.0.7":
-  version: 8.0.7
-  resolution: "nodemailer@npm:8.0.7"
-  checksum: 10c0/f1580263ad7fba64a493c47c4d78f06679c0da9cc3becbe6b628311a16474c07286fc4e530006ea262537594ccc475dc569fd519275222fd01f99c315976aeac
+"nodemailer@npm:^7.0.13":
+  version: 7.0.13
+  resolution: "nodemailer@npm:7.0.13"
+  checksum: 10c0/b26aa5b9fa4a033bbc1e1c16ef75ee2a9c8641fd290c00a8361d6a251b3c1b8bad545a23efa627f59cb266340a448891ea8aa49d8a9307c767b8505219d95079
   languageName: node
   linkType: hard
 
@@ -9971,7 +9971,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:19.2.6":
+"react-dom@npm:*, react-dom@npm:19.2.6":
   version: 19.2.6
   resolution: "react-dom@npm:19.2.6"
   dependencies:

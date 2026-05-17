@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library -- TanStack Table is intentionally stateful; keep the opt-out local to DataGrid. */
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -106,6 +107,8 @@ export function DataGrid<TData>({
   defaultExpandAll = false,
   className,
 }: DataGridProps<TData>) {
+  'use no memo';
+
   const t = useTranslations('dataGrid');
 
   const columns = useMemo<ColumnDef<TData>[]>(() => {

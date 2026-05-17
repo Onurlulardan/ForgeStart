@@ -18,10 +18,11 @@ type AppServerSocket = Socket<
 >;
 
 const PORT = Number(process.env.REALTIME_PORT ?? 4000);
-const APP_URL =
+const PUBLIC_APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.AUTH_URL ??
   'http://localhost:3000';
+const AUTH_URL = process.env.AUTH_URL ?? PUBLIC_APP_URL;
 const INTERNAL_SECRET = process.env.AUTH_SECRET ?? '';
 
 interface InternalEmitBody {
@@ -91,7 +92,7 @@ const io = new Server<
   SocketData
 >(httpServer, {
   cors: {
-    origin: [APP_URL],
+    origin: [PUBLIC_APP_URL],
     credentials: true,
   },
 });
@@ -104,7 +105,7 @@ io.use(async (socket, next) => {
     (typeof socket.handshake.auth?.cookie === 'string'
       ? (socket.handshake.auth.cookie as string)
       : undefined);
-  const user = await authenticateFromCookie(cookie, APP_URL);
+  const user = await authenticateFromCookie(cookie, AUTH_URL);
   if (!user) {
     next(new Error('unauthorized'));
     return;
