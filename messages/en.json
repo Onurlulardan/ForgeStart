@@ -99,7 +99,15 @@
     "loginSuccess": "Signed in successfully",
     "registerSuccess": "Account created",
     "resetSuccess": "Password updated",
-    "forgotSuccess": "Reset link sent to your inbox"
+    "forgotSuccess": "Reset link sent to your inbox",
+    "verifySuccess": "Your email is verified",
+    "verifyFailed": "Verification failed",
+    "verifyBannerTitle": "Verify your email address",
+    "verifyBannerDescription": "Click the verification link in your inbox.",
+    "verifyResend": "Resend",
+    "verifyResendSending": "Sending...",
+    "verifyResendSent": "Verification email re-sent",
+    "verifyResendFailed": "Could not send email"
   },
   "admin": {
     "hubTitle": "Administration",
@@ -275,7 +283,21 @@
       "passwordSection": "Change password",
       "currentPasswordHint": "Enter your current password to set a new one.",
       "newPasswordHint": "Leave blank if you don't want to change the password."
+    },
+    "theme": {
+      "title": "Theme customizer",
+      "description": "Edit brand tokens live and save as the system default for everyone."
     }
+  },
+  "uploads": {
+    "dropzoneTitle": "Drag a file or click to choose",
+    "chooseFile": "Choose file",
+    "changeAvatar": "Change avatar",
+    "removeAvatar": "Remove",
+    "uploading": "Uploading...",
+    "uploadFailed": "Upload failed",
+    "removeConfirmTitle": "Delete file",
+    "removeConfirmDescription": "This file will be permanently removed from storage and database."
   },
   "dashboard": {
     "title": "Dashboard",

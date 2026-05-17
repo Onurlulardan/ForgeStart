@@ -16,3 +16,4 @@ export { FormCheckbox, type FormCheckboxProps } from './form-checkbox';
 export { FormSwitch, type FormSwitchProps } from './form-switch';
 export { SubmitButton, type SubmitButtonProps } from './submit-button';
 export { UnsavedChangesDialog, type UnsavedChangesDialogProps } from './unsaved-changes-dialog';
+export { FormRichText, type FormRichTextProps } from './form-rich-text';

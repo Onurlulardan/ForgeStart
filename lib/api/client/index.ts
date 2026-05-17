@@ -32,3 +32,8 @@ export {
   type PasswordResetRequestInput,
   type PasswordResetConfirmInput,
 } from './auth';
+export {
+  uploadsApi,
+  type UploadOptions,
+  type UploadProgressEvent,
+} from './uploads';

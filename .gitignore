@@ -48,3 +48,10 @@ next-env.d.ts
 
 # docker
 postgres-data
+
+# uploads (local-disk storage driver default)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# server build (socket.io)
+/server/dist

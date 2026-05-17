@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { apiKeys, users } from '@/db/schema';
 import { handleRouteError, parseJson } from '@/lib/api/response';
 import { requireApiPermission } from '@/lib/auth/server-permissions';
+import { requireRateLimit } from '@/lib/rate-limit/middleware';
 import { apiKeyCreateSchema } from '@/lib/validation/admin';
 import { generateApiKey, getApiKeyPrefix, hashToken } from '@/lib/tokens';
 import { writeAuditLog } from '@/lib/audit';
@@ -45,6 +46,13 @@ export async function POST(request: Request) {
   try {
     const authz = await requireApiPermission('api-key', 'create');
     if (!authz.ok) return authz.response;
+
+    const rate = await requireRateLimit({
+      preset: 'apiKeyCreate',
+      identifier: authz.session.user.id,
+      request,
+    });
+    if (!rate.ok) return rate.response;
 
     const parsed = await parseJson(request, apiKeyCreateSchema);
     if (!parsed.ok) return parsed.response;

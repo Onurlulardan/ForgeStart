@@ -99,7 +99,15 @@
     "loginSuccess": "Giriş başarılı",
     "registerSuccess": "Hesabınız oluşturuldu",
     "resetSuccess": "Şifreniz güncellendi",
-    "forgotSuccess": "Sıfırlama linki e-postanıza gönderildi"
+    "forgotSuccess": "Sıfırlama linki e-postanıza gönderildi",
+    "verifySuccess": "E-posta adresiniz doğrulandı",
+    "verifyFailed": "Doğrulama başarısız",
+    "verifyBannerTitle": "E-posta adresinizi doğrulayın",
+    "verifyBannerDescription": "Gelen kutunuzdaki doğrulama linkine tıklayın.",
+    "verifyResend": "Tekrar gönder",
+    "verifyResendSending": "Gönderiliyor...",
+    "verifyResendSent": "Doğrulama e-postası tekrar gönderildi",
+    "verifyResendFailed": "E-posta gönderilemedi"
   },
   "admin": {
     "hubTitle": "Yönetim Paneli",
@@ -275,7 +283,21 @@
       "passwordSection": "Şifre değiştir",
       "currentPasswordHint": "Yeni şifre belirlemek için mevcut şifrenizi girin.",
       "newPasswordHint": "Şifreyi değiştirmiyorsanız boş bırakın."
+    },
+    "theme": {
+      "title": "Tema Özelleştirici",
+      "description": "Marka token'larını canlı düzenleyin, kullanıcılarınız için sistem varsayılanı olarak kaydedin."
     }
+  },
+  "uploads": {
+    "dropzoneTitle": "Dosyayı sürükleyin veya seçin",
+    "chooseFile": "Dosya seç",
+    "changeAvatar": "Avatarı değiştir",
+    "removeAvatar": "Kaldır",
+    "uploading": "Yükleniyor...",
+    "uploadFailed": "Yükleme başarısız",
+    "removeConfirmTitle": "Dosyayı sil",
+    "removeConfirmDescription": "Bu dosya disk ve veritabanından kalıcı olarak silinecek."
   },
   "dashboard": {
     "title": "Pano",

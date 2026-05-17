@@ -13,6 +13,7 @@ import { useNotificationSetup } from '@/hooks/useNotificationSetup';
 import { ConfirmDialogProvider } from '@/components/layout/confirm-dialog-host';
 import { ErrorBoundary } from '@/components/feedback/error-boundary';
 import { getQueryClient } from '@/lib/query/client';
+import { ThemeCustomizerProvider } from '@/contexts/ThemeCustomizerContext';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -43,16 +44,18 @@ function ThemeBridge({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ isDark, toggleTheme }}>
-      <TooltipProvider>
-        <NotificationProvider>
-          <ConfirmDialogProvider>
-            <NotificationSetup>
-              <ErrorBoundary>{children}</ErrorBoundary>
-            </NotificationSetup>
-          </ConfirmDialogProvider>
-          <Toaster position="top-right" closeButton richColors />
-        </NotificationProvider>
-      </TooltipProvider>
+      <ThemeCustomizerProvider>
+        <TooltipProvider>
+          <NotificationProvider>
+            <ConfirmDialogProvider>
+              <NotificationSetup>
+                <ErrorBoundary>{children}</ErrorBoundary>
+              </NotificationSetup>
+            </ConfirmDialogProvider>
+            <Toaster position="top-right" closeButton richColors />
+          </NotificationProvider>
+        </TooltipProvider>
+      </ThemeCustomizerProvider>
     </ThemeContext.Provider>
   );
 }

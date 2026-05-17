@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import Navbar from '@/core/layout/components/Navbar';
 import Sidebar from '@/core/layout/components/Sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { VerifyEmailBanner } from '@/components/auth/verify-banner';
 import { cn } from '@/lib/utils';
 
 function ProtectedSkeleton() {
@@ -47,7 +48,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
       >
         <Navbar collapsed={collapsed} setCollapsed={setCollapsed} />
         <main className="px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-7xl flex-col gap-6">{children}</div>
+          <div className="mx-auto flex max-w-7xl flex-col gap-6">
+            <VerifyEmailBanner />
+            {children}
+          </div>
         </main>
       </div>
     </div>

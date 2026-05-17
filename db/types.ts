@@ -4,6 +4,7 @@ import type {
   apiKeys,
   appSettings,
   auditLogs,
+  emailVerificationTokens,
   invitations,
   organizationMembers,
   organizations,
@@ -13,6 +14,7 @@ import type {
   resources,
   roles,
   securityLogs,
+  uploads,
   userRoles,
   users,
 } from './schema';
@@ -42,10 +44,25 @@ export const InvitationStatus = {
   EXPIRED: 'EXPIRED',
 } as const;
 
+export const UploadKind = {
+  AVATAR: 'avatar',
+  ATTACHMENT: 'attachment',
+  RICH_TEXT_IMAGE: 'rich_text_image',
+  ORGANIZATION_LOGO: 'organization_logo',
+  OTHER: 'other',
+} as const;
+
+export const StorageProvider = {
+  LOCAL: 'local',
+  S3: 's3',
+} as const;
+
 export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
 export type OrgStatus = (typeof OrgStatus)[keyof typeof OrgStatus];
 export type PermissionTarget = (typeof PermissionTarget)[keyof typeof PermissionTarget];
 export type InvitationStatus = (typeof InvitationStatus)[keyof typeof InvitationStatus];
+export type UploadKind = (typeof UploadKind)[keyof typeof UploadKind];
+export type StorageProvider = (typeof StorageProvider)[keyof typeof StorageProvider];
 
 export type User = InferSelectModel<typeof users>;
 export type NewUser = InferInsertModel<typeof users>;
@@ -63,3 +80,6 @@ export type ApiKey = InferSelectModel<typeof apiKeys>;
 export type Invitation = InferSelectModel<typeof invitations>;
 export type PasswordResetToken = InferSelectModel<typeof passwordResetTokens>;
 export type AuditLog = InferSelectModel<typeof auditLogs>;
+export type Upload = InferSelectModel<typeof uploads>;
+export type NewUpload = InferInsertModel<typeof uploads>;
+export type EmailVerificationToken = InferSelectModel<typeof emailVerificationTokens>;

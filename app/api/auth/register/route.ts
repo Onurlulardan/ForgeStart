@@ -5,10 +5,19 @@ import { db } from '@/db';
 import { roles, userRoles, users } from '@/db/schema';
 import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
 import { logSecurityEvent } from '@/lib/auth/session-data';
+import { sendVerificationEmail } from '@/lib/auth/email-verification';
+import { requireRateLimit } from '@/lib/rate-limit/middleware';
 import { registerSchema } from '@/lib/validation/admin';
+
+function getAppUrl(request: Request) {
+  return process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? new URL(request.url).origin;
+}
 
 export async function POST(request: Request) {
   try {
+    const rate = await requireRateLimit({ preset: 'authRegister', request });
+    if (!rate.ok) return rate.response;
+
     const parsed = await parseJson(request, registerSchema);
     if (!parsed.ok) return parsed.response;
 
@@ -54,6 +63,10 @@ export async function POST(request: Request) {
       type: 'REGISTER',
       message: `User registered: ${result.user.email}`,
       request,
+    });
+
+    sendVerificationEmail(result.user, getAppUrl(request)).catch((err) => {
+      console.error('[REGISTER_VERIFY_EMAIL]', err);
     });
 
     return NextResponse.json(

@@ -23,6 +23,14 @@ export const invitationStatusEnum = pgEnum('invitation_status', [
   'REVOKED',
   'EXPIRED',
 ]);
+export const storageProviderEnum = pgEnum('storage_provider', ['local', 's3']);
+export const uploadKindEnum = pgEnum('upload_kind', [
+  'avatar',
+  'attachment',
+  'rich_text_image',
+  'organization_logo',
+  'other',
+]);
 
 const timestamps = {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
@@ -369,6 +377,58 @@ export const passwordResetTokens = pgTable(
     tokenHashIdx: uniqueIndex('password_reset_tokens_token_hash_idx').on(table.tokenHash),
     userIdx: index('password_reset_tokens_user_id_idx').on(table.userId),
     usedAtIdx: index('password_reset_tokens_used_at_idx').on(table.usedAt),
+  })
+);
+
+export const emailVerificationTokens = pgTable(
+  'email_verification_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+    usedAt: timestamp('used_at', { mode: 'date' }),
+    sentAt: timestamp('sent_at', { mode: 'date' }).notNull().defaultNow(),
+    ...timestamps,
+  },
+  (table) => ({
+    tokenHashIdx: uniqueIndex('email_verification_tokens_token_hash_idx').on(table.tokenHash),
+    userIdx: index('email_verification_tokens_user_id_idx').on(table.userId),
+    usedAtIdx: index('email_verification_tokens_used_at_idx').on(table.usedAt),
+  })
+);
+
+export const uploads = pgTable(
+  'uploads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    kind: uploadKindEnum('kind').notNull().default('attachment'),
+    provider: storageProviderEnum('provider').notNull().default('local'),
+    filename: text('filename').notNull(),
+    originalName: text('original_name').notNull(),
+    mime: text('mime').notNull(),
+    size: integer('size').notNull(),
+    path: text('path').notNull(),
+    publicUrl: text('public_url'),
+    width: integer('width'),
+    height: integer('height'),
+    thumbnailPath: text('thumbnail_path'),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    deletedAt: timestamp('deleted_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => ({
+    ownerIdx: index('uploads_owner_id_idx').on(table.ownerId),
+    kindIdx: index('uploads_kind_idx').on(table.kind),
+    pathIdx: uniqueIndex('uploads_path_idx').on(table.path),
+    deletedAtIdx: index('uploads_deleted_at_idx').on(table.deletedAt),
   })
 );
 

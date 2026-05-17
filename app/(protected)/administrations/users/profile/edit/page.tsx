@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import { LockIcon, SaveIcon } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
@@ -20,6 +19,7 @@ import {
   FormInput,
   SubmitButton,
 } from '@/components/forms';
+import { AvatarUploader } from '@/components/uploads';
 import { profileApi } from '@/lib/api/client';
 import { profileUpdateSchema } from '@/lib/validation/admin';
 import { initials } from '@/lib/formatters';
@@ -89,15 +89,27 @@ export default function ProfileEditPage() {
     <PageShell title={t('title')} description={t('description')}>
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <Card className="rounded-lg">
-          <CardContent className="flex flex-col items-center p-6 text-center">
-            <Avatar className="size-24">
-              <AvatarImage src={user.avatar ?? undefined} alt={user.email ?? 'User'} />
-              <AvatarFallback>
-                {initials(fullName || user.email || '')}
-              </AvatarFallback>
-            </Avatar>
-            <h2 className="mt-4 text-lg font-semibold">{fullName || user.email}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
+            <AvatarUploader
+              currentUrl={user.avatar ?? undefined}
+              fallback={initials(fullName || user.email || '')}
+              onUploaded={async (upload) => {
+                const url = upload.publicUrl ?? `/api/uploads/${upload.id}`;
+                await profileApi.update({ avatar: url });
+                await updateSession({
+                  ...session,
+                  user: { ...user, avatar: url },
+                });
+                router.refresh();
+              }}
+              onRemoved={async () => {
+                await profileApi.update({ avatar: '' });
+                await updateSession({ ...session, user: { ...user, avatar: null } });
+                router.refresh();
+              }}
+            />
+            <h2 className="mt-2 text-lg font-semibold">{fullName || user.email}</h2>
+            <p className="text-sm text-muted-foreground">{user.email}</p>
           </CardContent>
         </Card>
 
@@ -125,7 +137,6 @@ export default function ProfileEditPage() {
                     <FormInput name="lastName" label={tAuth('lastNameLabel')} />
                   </div>
                   <FormInput name="phone" label={tAuth('phoneLabel')} />
-                  <FormInput name="avatar" label={t('avatarUrl')} type="url" />
                   <SubmitButton>
                     <SaveIcon />
                     {tCommon('save')}

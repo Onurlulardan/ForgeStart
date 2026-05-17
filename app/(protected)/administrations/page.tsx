@@ -10,6 +10,7 @@ import {
   ClipboardListIcon,
   KeyRoundIcon,
   LockKeyholeIcon,
+  PaletteIcon,
   ShieldCheckIcon,
   SlidersHorizontalIcon,
   UserCogIcon,
@@ -110,6 +111,13 @@ const ADMIN_CARDS: AdminCard[] = [
     href: '/administrations/system',
     permission: ['system', 'view'],
     icon: SlidersHorizontalIcon,
+  },
+  {
+    titleKey: 'admin.theme.title',
+    descriptionKey: 'admin.theme.description',
+    href: '/administrations/system/theme',
+    permission: ['system', 'view'],
+    icon: PaletteIcon,
   },
 ];
 

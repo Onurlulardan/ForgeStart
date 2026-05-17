@@ -26,3 +26,8 @@ export {
   type UseCrudResourceOptions,
   type UseCrudResourceReturn,
 } from './use-crud-resource';
+export {
+  useFileUpload,
+  type UseFileUploadOptions,
+  type UseFileUploadReturn,
+} from './use-file-upload';
