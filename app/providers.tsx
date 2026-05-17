@@ -1,11 +1,12 @@
 'use client';
 
-import { App, ConfigProvider, theme } from 'antd';
-import { createContext, useContext, useState, useEffect } from 'react';
-import baseTheme from '@/config/theme.json';
+import { createContext, useContext } from 'react';
+import { SessionProvider } from 'next-auth/react';
+import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { useNotificationSetup } from '@/hooks/useNotificationSetup';
-import { SessionProvider } from 'next-auth/react';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -26,41 +27,37 @@ function NotificationSetup({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setIsDark(savedTheme === 'dark');
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDark(prefersDark);
-    }
-  }, []);
+function ThemeBridge({ children }: { children: React.ReactNode }) {
+  const { resolvedTheme, setTheme } = useNextTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-  };
-
-  const themeConfig = {
-    ...baseTheme,
-    algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    setTheme(isDark ? 'light' : 'dark');
   };
 
   return (
+    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+      <TooltipProvider>
+        <NotificationProvider>
+          <NotificationSetup>{children}</NotificationSetup>
+          <Toaster position="top-right" closeButton richColors />
+        </NotificationProvider>
+      </TooltipProvider>
+    </ThemeContext.Provider>
+  );
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
     <SessionProvider>
-      <ThemeContext.Provider value={{ isDark, toggleTheme }}>
-        <ConfigProvider theme={themeConfig}>
-          <App>
-            <NotificationProvider>
-              <NotificationSetup>{children}</NotificationSetup>
-            </NotificationProvider>
-          </App>
-        </ConfigProvider>
-      </ThemeContext.Provider>
+      <NextThemesProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <ThemeBridge>{children}</ThemeBridge>
+      </NextThemesProvider>
     </SessionProvider>
   );
 }

@@ -1,68 +1,84 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Form, Input, Button, Space } from 'antd';
+import { FormEvent, useEffect, useState } from 'react';
 import { Action } from '@/db/types';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+
+export interface ActionFormData {
+  name: string;
+  slug: string;
+  description: string | null;
+}
 
 interface ActionFormProps {
   initialValues?: Action | null;
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (values: ActionFormData) => Promise<void>;
   loading?: boolean;
 }
 
+const emptyForm: ActionFormData = {
+  name: '',
+  slug: '',
+  description: null,
+};
+
 export function ActionForm({ initialValues, onSubmit, loading }: ActionFormProps) {
-  const [form] = Form.useForm();
+  const [values, setValues] = useState<ActionFormData>(emptyForm);
 
   useEffect(() => {
-    form.resetFields();
-    if (initialValues) {
-      form.setFieldsValue({
-        name: initialValues.name,
-        slug: initialValues.slug,
-        description: initialValues.description,
-      });
-    }
-  }, [form, initialValues]);
+    setValues({
+      name: initialValues?.name ?? '',
+      slug: initialValues?.slug ?? '',
+      description: initialValues?.description ?? null,
+    });
+  }, [initialValues]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await onSubmit(values);
+  };
 
   return (
-    <Form form={form} layout="vertical" onFinish={onSubmit}>
-      <Form.Item
-        name="name"
-        label="Action Name"
-        rules={[
-          { required: true, message: 'Please enter action name' },
-          { min: 3, message: 'Action name must be at least 3 characters' },
-        ]}
-      >
-        <Input placeholder="Enter action name (e.g., VIEW, CREATE)" />
-      </Form.Item>
-
-      <Form.Item
-        name="slug"
-        label="Slug"
-        rules={[
-          { required: true, message: 'Please enter slug' },
-          {
-            pattern: /^[a-z0-9-]+$/,
-            message: 'Slug can only contain lowercase letters, numbers, and hyphens',
-          },
-        ]}
-      >
-        <Input placeholder="Enter slug (e.g., view, create)" />
-      </Form.Item>
-
-      <Form.Item name="description" label="Description">
-        <Input.TextArea rows={4} placeholder="Enter action description" />
-      </Form.Item>
-
-      <Form.Item className="mb-0">
-        <Space className="w-full justify-end">
-          <Button onClick={() => form.resetFields()}>Reset</Button>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            {initialValues ? 'Update' : 'Create'} Action
-          </Button>
-        </Space>
-      </Form.Item>
-    </Form>
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="actionName">Action name</FieldLabel>
+          <Input
+            id="actionName"
+            value={values.name}
+            minLength={3}
+            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="actionSlug">Slug</FieldLabel>
+          <Input
+            id="actionSlug"
+            pattern="^[a-z0-9-_]+$"
+            value={values.slug}
+            onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))}
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="actionDescription">Description</FieldLabel>
+          <Textarea
+            id="actionDescription"
+            rows={4}
+            value={values.description ?? ''}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, description: event.target.value || null }))
+            }
+          />
+        </Field>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Saving...' : initialValues ? 'Update action' : 'Create action'}
+        </Button>
+      </FieldGroup>
+    </form>
   );
 }

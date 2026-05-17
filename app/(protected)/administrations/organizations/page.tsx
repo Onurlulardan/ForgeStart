@@ -1,47 +1,63 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Button, Tag, Typography, Dropdown, MenuProps, Drawer, Modal } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
+import { EditIcon, PlusIcon, Trash2Icon, UserPlusIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { ConfirmDialog } from '@/components/app/confirm-dialog';
+import { EntityActions } from '@/components/app/entity-actions';
+import { PageHeader } from '@/components/app/page-header';
+import { StatusBadge } from '@/components/app/status-badge';
 import { usePermission } from '@/lib/auth/client-permissions';
 import { DataGrid } from '@/core/components/datagrid';
 import { Organization, OrgStatus } from '@/db/types';
-import { OrganizationForm } from './components/organization-form';
-import { AddUsersDrawer } from './components/add-users-drawer';
 import { getRequest, deleteRequest, postRequest, putRequest } from '@/lib/apiClient';
+import { AddUsersDrawer } from './components/add-users-drawer';
+import { OrganizationForm, OrganizationFormData } from './components/organization-form';
 
-const { Title } = Typography;
+type OrganizationWithCount = Organization & {
+  _count?: {
+    members: number;
+  };
+  children?: OrganizationWithCount[];
+};
 
 export default function OrganizationsPage() {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [addUsersDrawerOpen, setAddUsersDrawerOpen] = useState(false);
-  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [selectedOrg, setSelectedOrg] = useState<OrganizationWithCount | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
-  // Permission hooks
+  const [orgToDelete, setOrgToDelete] = useState<OrganizationWithCount | null>(null);
   const canCreate = usePermission('organization', 'create');
   const canEdit = usePermission('organization', 'edit');
   const canDelete = usePermission('organization', 'delete');
   const canAddUsers = usePermission('organization', 'edit');
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, []);
-
   const fetchOrganizations = async () => {
+    setLoading(true);
     try {
-      const data = await getRequest<Organization[]>('/administrations/organizations');
-      const rootOrgs = data.filter((org) => !org.parentId);
-      setOrganizations(rootOrgs);
+      const data = await getRequest<OrganizationWithCount[]>('/administrations/organizations');
+      setOrganizations(data.filter((org) => !org.parentId));
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, []);
 
   const handleDelete = async () => {
     if (!orgToDelete) return;
@@ -56,7 +72,7 @@ export default function OrganizationsPage() {
     }
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: OrganizationFormData) => {
     setFormLoading(true);
     try {
       if (selectedOrg) {
@@ -77,141 +93,135 @@ export default function OrganizationsPage() {
 
   const columns = [
     {
-      title: 'Actions',
+      title: '',
       key: 'actions',
-      width: 100,
-      render: (record: Organization) => {
-        const menuItems: MenuProps['items'] = [];
-
-        if (canEdit) {
-          menuItems.push({
-            key: 'edit',
-            label: 'Edit',
-            icon: <EditOutlined />,
-            onClick: () => {
-              setSelectedOrg(record);
-              setDrawerVisible(true);
+      width: 72,
+      render: (record: OrganizationWithCount) => (
+        <EntityActions
+          actions={[
+            {
+              label: 'Edit',
+              icon: <EditIcon />,
+              disabled: !canEdit,
+              onSelect: () => {
+                setSelectedOrg(record);
+                setDrawerVisible(true);
+              },
             },
-          });
-        }
-
-        if (canAddUsers) {
-          menuItems.push({
-            key: 'addUsers',
-            label: 'Add Users',
-            icon: <PlusOutlined />,
-            onClick: () => {
-              setSelectedOrg(record);
-              setAddUsersDrawerOpen(true);
+            {
+              label: 'Add users',
+              icon: <UserPlusIcon />,
+              disabled: !canAddUsers,
+              onSelect: () => {
+                setSelectedOrg(record);
+                setAddUsersDrawerOpen(true);
+              },
             },
-          });
-        }
-
-        if (canDelete) {
-          menuItems.push({
-            key: 'delete',
-            label: 'Delete',
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              setOrgToDelete(record);
-              setDeleteModalVisible(true);
+            {
+              label: 'Delete',
+              icon: <Trash2Icon />,
+              destructive: true,
+              disabled: !canDelete,
+              onSelect: () => {
+                setOrgToDelete(record);
+                setDeleteModalVisible(true);
+              },
             },
-          });
-        }
-
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        );
-      },
+          ]}
+        />
+      ),
     },
     {
-      title: 'Name',
-      dataIndex: 'name',
+      title: 'Organization',
       key: 'name',
-    },
-    {
-      title: 'Slug',
-      dataIndex: 'slug',
-      key: 'slug',
+      render: (record: OrganizationWithCount) => (
+        <div>
+          <div className="font-medium">{record.name}</div>
+          <div className="text-xs text-muted-foreground">{record.slug}</div>
+        </div>
+      ),
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: OrgStatus) => (
-        <Tag color={status === 'ACTIVE' ? 'green' : status === 'INACTIVE' ? 'orange' : 'red'}>
-          {status}
-        </Tag>
-      ),
+      render: (status: OrgStatus) => <StatusBadge status={status} />,
     },
     {
       title: 'Members',
       key: 'members',
-      render: (record: any) => record._count?.members || 0,
+      render: (record: OrganizationWithCount) => record._count?.members ?? 0,
     },
   ];
 
-  const headerContent = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-      <Title level={2}>Organizations</Title>
-      {canCreate && (
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setSelectedOrg(null);
-            setDrawerVisible(true);
-          }}
-        >
-          Create Organization
-        </Button>
-      )}
-    </div>
-  );
-
   return (
     <>
-      <Card>
-        {headerContent}
-        <DataGrid
-          columns={columns}
-          dataSource={organizations}
-          loading={loading}
-          rowKey={(record) => `org-${record.id}`}
-          expandable={{
-            defaultExpandAllRows: true,
-            childrenColumnName: 'children',
-          }}
-          onRowDoubleClick={
-            canEdit
-              ? (record) => {
-                  setSelectedOrg(record);
-                  setDrawerVisible(true);
-                }
-              : undefined
-          }
-        />
+      <PageHeader
+        title="Organizations"
+        description="Manage organization hierarchy, membership and workspace status."
+        actions={
+          canCreate && (
+            <Button
+              onClick={() => {
+                setSelectedOrg(null);
+                setDrawerVisible(true);
+              }}
+            >
+              <PlusIcon data-icon="inline-start" />
+              Create organization
+            </Button>
+          )
+        }
+      />
+
+      <Card className="rounded-lg">
+        <CardContent className="p-4">
+          <DataGrid<OrganizationWithCount>
+            columns={columns}
+            dataSource={organizations}
+            loading={loading}
+            rowKey={(record) => `org-${record.id}`}
+            expandable={{
+              defaultExpandAllRows: true,
+              childrenColumnName: 'children',
+            }}
+            onRowDoubleClick={
+              canEdit
+                ? (record) => {
+                    setSelectedOrg(record);
+                    setDrawerVisible(true);
+                  }
+                : undefined
+            }
+          />
+        </CardContent>
       </Card>
 
-      <Drawer
-        title={selectedOrg ? 'Edit Organization' : 'Create Organization'}
-        width={720}
+      <Sheet
         open={drawerVisible}
-        onClose={() => {
-          setDrawerVisible(false);
-          setSelectedOrg(null);
+        onOpenChange={(open) => {
+          setDrawerVisible(open);
+          if (!open) setSelectedOrg(null);
         }}
-        destroyOnClose
       >
-        <OrganizationForm
-          initialValues={selectedOrg || undefined}
-          onSubmit={handleSubmit}
-          loading={formLoading}
-        />
-      </Drawer>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+          <SheetHeader>
+            <SheetTitle>{selectedOrg ? 'Edit organization' : 'Create organization'}</SheetTitle>
+            <SheetDescription>
+              {selectedOrg
+                ? 'Update workspace identity and hierarchy.'
+                : 'Add a new workspace node.'}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4">
+            <OrganizationForm
+              initialValues={selectedOrg || undefined}
+              onSubmit={handleSubmit}
+              loading={formLoading}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <AddUsersDrawer
         organization={selectedOrg}
@@ -222,19 +232,16 @@ export default function OrganizationsPage() {
         }}
       />
 
-      <Modal
-        title="Delete Organization"
+      <ConfirmDialog
         open={deleteModalVisible}
-        onOk={handleDelete}
-        onCancel={() => {
-          setDeleteModalVisible(false);
-          setOrgToDelete(null);
+        title="Delete organization"
+        description="Are you sure you want to delete this organization? This action cannot be undone."
+        onOpenChange={(open) => {
+          setDeleteModalVisible(open);
+          if (!open) setOrgToDelete(null);
         }}
-        okText="Delete"
-        okButtonProps={{ danger: true }}
-      >
-        <p>Are you sure you want to delete this organization? This action cannot be undone.</p>
-      </Modal>
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

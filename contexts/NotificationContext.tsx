@@ -1,31 +1,22 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import { notification } from 'antd';
-import { NotificationInstance } from 'antd/es/notification/interface';
+import { toast } from 'sonner';
 import { ShowNotificationFunction } from '@/lib/apiClient/types/types';
 
 interface NotificationContextType {
   showNotification: ShowNotificationFunction;
-  notificationApi: NotificationInstance;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
-  const [notificationApi, contextHolder] = notification.useNotification();
-
   const showNotification: ShowNotificationFunction = (type, message, description) => {
-    notificationApi[type]({
-      message,
-      description,
-      placement: 'topRight',
-    });
+    toast[type](message, { description });
   };
 
   return (
-    <NotificationContext.Provider value={{ showNotification, notificationApi }}>
-      {contextHolder}
+    <NotificationContext.Provider value={{ showNotification }}>
       {children}
     </NotificationContext.Provider>
   );

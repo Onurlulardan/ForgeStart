@@ -1,0 +1,31 @@
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://0.0.0.0:3001
+- Environments: .env
+✓ Ready in 655ms
+
+○ Compiling /auth/login ...
+ GET /auth/login 200 in 6.5s (next.js: 6.2s, application-code: 354ms)
+ GET /auth/login 200 in 73ms (next.js: 6ms, application-code: 68ms)
+ GET /auth/login 200 in 104ms (next.js: 3ms, application-code: 102ms)
+ GET /auth/login 200 in 64ms (next.js: 4ms, application-code: 60ms)
+ GET /auth/login 200 in 71ms (next.js: 3ms, application-code: 68ms)
+ GET /auth/login 200 in 71ms (next.js: 2ms, application-code: 68ms)
+ GET /auth/login? 200 in 57ms (next.js: 2ms, application-code: 55ms)
+ GET /auth/login 200 in 54ms (next.js: 3ms, application-code: 51ms)
+ GET /auth/login? 200 in 54ms (next.js: 3ms, application-code: 51ms)
+ GET /auth/login 200 in 58ms (next.js: 2ms, application-code: 55ms)
+ GET /auth/login? 200 in 87ms (next.js: 4ms, application-code: 82ms)
+ GET /auth/login 200 in 59ms (next.js: 2ms, application-code: 57ms)
+ GET /auth/login? 200 in 67ms (next.js: 2ms, application-code: 65ms)
+ GET /auth/login 200 in 149ms (next.js: 5ms, application-code: 144ms)
+ GET /auth/login 200 in 44ms (next.js: 2ms, application-code: 41ms)
+ GET /api/auth/session 200 in 2.3s (next.js: 2.3s, application-code: 33ms)
+ GET /api/auth/session 200 in 25ms (next.js: 18ms, application-code: 7ms)
+ GET /api/auth/providers 200 in 17ms (next.js: 11ms, application-code: 6ms)
+ GET /api/auth/csrf 200 in 8ms (next.js: 1943µs, application-code: 6ms)
+ POST /api/auth/callback/credentials? 200 in 27ms (next.js: 2ms, application-code: 25ms)
+ GET /api/auth/session 200 in 7ms (next.js: 1831µs, application-code: 6ms)
+✓ Compiled in 51ms
+✓ Compiled in 247ms
+[?25h

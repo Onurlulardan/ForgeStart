@@ -1,30 +1,38 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Button, Tag, Typography, Dropdown, MenuProps, Drawer, Modal } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
+import { EditIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { ConfirmDialog } from '@/components/app/confirm-dialog';
+import { EntityActions } from '@/components/app/entity-actions';
+import { PageHeader } from '@/components/app/page-header';
+import { StatusBadge } from '@/components/app/status-badge';
 import { usePermission } from '@/lib/auth/client-permissions';
 import { DataGrid } from '@/core/components/datagrid';
-import { UserForm } from './components/user-form';
 import { User, UserStatus } from '@/db/types';
 import { getRequest, postRequest, putRequest, deleteRequest } from '@/lib/apiClient';
+import { UserForm, UserFormData } from './components/user-form';
 
-const { Title } = Typography;
-
-// Role Type Definition
 type Role = {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
 };
 
-// UserRole Type Definition
 type UserRole = {
   role: Role;
 };
 
-// User Type Definition (without password)
-type UserWithoutPassword = Omit<User, 'password'> & {
+type UserWithoutPassword = Omit<User, 'passwordHash'> & {
   userRoles?: UserRole[];
 };
 
@@ -36,16 +44,12 @@ export default function UsersPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithoutPassword | null>(null);
-  // Permission hooks
   const canCreate = usePermission('user', 'create');
   const canEdit = usePermission('user', 'edit');
   const canDelete = usePermission('user', 'delete');
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const fetchUsers = async () => {
+    setLoading(true);
     try {
       const data = await getRequest<UserWithoutPassword[]>('/administrations/users');
       setUsers(data);
@@ -55,6 +59,10 @@ export default function UsersPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleDelete = async () => {
     if (!userToDelete) return;
@@ -69,7 +77,7 @@ export default function UsersPage() {
     }
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: UserFormData) => {
     setFormLoading(true);
     try {
       const endpoint = selectedUser
@@ -94,176 +102,168 @@ export default function UsersPage() {
 
   const columns = [
     {
-      title: 'Actions',
+      title: '',
       key: 'actions',
-      width: 100,
-      render: (record: UserWithoutPassword) => {
-        const menuItems: MenuProps['items'] = [];
-
-        if (canEdit) {
-          menuItems.push({
-            key: 'edit',
-            label: 'Edit',
-            icon: <EditOutlined />,
-            onClick: () => {
-              setSelectedUser(record);
-              setDrawerVisible(true);
+      width: 72,
+      render: (record: UserWithoutPassword) => (
+        <EntityActions
+          actions={[
+            {
+              label: 'Edit',
+              icon: <EditIcon />,
+              disabled: !canEdit,
+              onSelect: () => {
+                setSelectedUser(record);
+                setDrawerVisible(true);
+              },
             },
-          });
-        }
-
-        if (canDelete) {
-          menuItems.push({
-            key: 'delete',
-            label: 'Delete',
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              setUserToDelete(record);
-              setDeleteModalVisible(true);
+            {
+              label: 'Delete',
+              icon: <Trash2Icon />,
+              destructive: true,
+              disabled: !canDelete,
+              onSelect: () => {
+                setUserToDelete(record);
+                setDeleteModalVisible(true);
+              },
             },
-          });
-        }
-
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        );
-      },
+          ]}
+        />
+      ),
     },
     {
       title: 'Name',
       key: 'name',
-      render: (record: UserWithoutPassword) => (
-        <span>
-          {record.firstName && record.lastName
-            ? `${record.firstName} ${record.lastName}`
-            : record.email}
-        </span>
-      ),
-    },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
+      render: (record: UserWithoutPassword) => {
+        const name = [record.firstName, record.lastName].filter(Boolean).join(' ');
+        return (
+          <div>
+            <div className="font-medium">{name || record.email}</div>
+            <div className="text-xs text-muted-foreground">{record.email}</div>
+          </div>
+        );
+      },
     },
     {
       title: 'Roles',
       key: 'roles',
       render: (record: UserWithoutPassword) => (
-        <>
-          {record.userRoles && record.userRoles.length > 0 ? (
-            record.userRoles.map((userRole, index) => (
-              <Tag
-                key={index}
-                color={userRole.role.name === 'ADMIN' ? 'blue' : 'green'}
-                style={{ marginRight: 4, marginBottom: 4 }}
-              >
+        <div className="flex flex-wrap gap-1">
+          {record.userRoles?.length ? (
+            record.userRoles.map((userRole) => (
+              <Badge key={userRole.role.id} variant="secondary" className="rounded-md">
                 {userRole.role.name}
-              </Tag>
+              </Badge>
             ))
           ) : (
-            <Tag>No Role</Tag>
+            <Badge variant="outline" className="rounded-md">
+              No role
+            </Badge>
           )}
-        </>
+        </div>
       ),
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: UserStatus) => (
-        <Tag color={status === 'ACTIVE' ? 'green' : 'red'}>{status}</Tag>
-      ),
+      render: (status: UserStatus) => <StatusBadge status={status} />,
     },
   ];
 
-  const headerContent = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-      <Title level={2}>Users</Title>
-      {canCreate && (
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setSelectedUser(null);
-            setDrawerVisible(true);
-          }}
-        >
-          Create User
-        </Button>
-      )}
-    </div>
-  );
-
   return (
     <>
-      <Card>
-        <DataGrid<UserWithoutPassword>
-          columns={columns}
-          dataSource={users}
-          rowKey="id"
-          loading={loading}
-          headerContent={headerContent}
-          onRowDoubleClick={
-            canEdit
-              ? (record) => {
-                  setSelectedUser(record);
-                  setDrawerVisible(true);
-                }
-              : undefined
-          }
-        />
+      <PageHeader
+        title="Users"
+        description="Manage user identities, role assignments and account status."
+        actions={
+          canCreate && (
+            <Button
+              onClick={() => {
+                setSelectedUser(null);
+                setDrawerVisible(true);
+              }}
+            >
+              <PlusIcon data-icon="inline-start" />
+              Create user
+            </Button>
+          )
+        }
+      />
+
+      <Card className="rounded-lg">
+        <CardContent className="p-4">
+          <DataGrid<UserWithoutPassword>
+            columns={columns}
+            dataSource={users}
+            rowKey="id"
+            loading={loading}
+            onRowDoubleClick={
+              canEdit
+                ? (record) => {
+                    setSelectedUser(record);
+                    setDrawerVisible(true);
+                  }
+                : undefined
+            }
+          />
+        </CardContent>
       </Card>
 
-      <Drawer
-        title={selectedUser ? 'Edit User' : 'Create User'}
+      <Sheet
         open={drawerVisible}
-        onClose={() => {
-          setDrawerVisible(false);
-          setSelectedUser(null);
+        onOpenChange={(open) => {
+          setDrawerVisible(open);
+          if (!open) setSelectedUser(null);
         }}
-        width={720}
       >
-        <UserForm
-          initialValues={
-            selectedUser
-              ? {
-                  ...selectedUser,
-                  userRoles: selectedUser.userRoles,
-                }
-              : undefined
-          }
-          onSubmit={handleSubmit}
-          loading={formLoading}
-        />
-      </Drawer>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+          <SheetHeader>
+            <SheetTitle>{selectedUser ? 'Edit user' : 'Create user'}</SheetTitle>
+            <SheetDescription>
+              {selectedUser
+                ? 'Update account profile, roles and status.'
+                : 'Create a user and assign starter roles.'}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4">
+            <UserForm
+              initialValues={
+                selectedUser
+                  ? {
+                      ...selectedUser,
+                      userRoles: selectedUser.userRoles,
+                    }
+                  : undefined
+              }
+              onSubmit={handleSubmit}
+              loading={formLoading}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
-      <Modal
-        title="Delete User"
+      <ConfirmDialog
         open={deleteModalVisible}
-        onOk={handleDelete}
-        onCancel={() => {
-          setDeleteModalVisible(false);
-          setUserToDelete(null);
+        title="Delete user"
+        description={
+          <>
+            Are you sure you want to delete{' '}
+            <span className="font-medium text-foreground">
+              {userToDelete
+                ? [userToDelete.firstName, userToDelete.lastName].filter(Boolean).join(' ') ||
+                  userToDelete.email
+                : 'this user'}
+            </span>
+            ? This action cannot be undone.
+          </>
+        }
+        onOpenChange={(open) => {
+          setDeleteModalVisible(open);
+          if (!open) setUserToDelete(null);
         }}
-        okText="Delete"
-        cancelText="Cancel"
-        okButtonProps={{ danger: true }}
-        centered
-      >
-        <p>Are you sure you want to delete this user?</p>
-        {userToDelete && (
-          <p>
-            <strong>
-              {userToDelete.firstName && userToDelete.lastName
-                ? `${userToDelete.firstName} ${userToDelete.lastName}`
-                : userToDelete.email}
-            </strong>
-          </p>
-        )}
-      </Modal>
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

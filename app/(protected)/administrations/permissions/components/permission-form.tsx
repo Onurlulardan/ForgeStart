@@ -1,8 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Form, Select, Button, Space } from 'antd';
+import { FormEvent, useEffect, useState } from 'react';
 import { Permission, Resource, Action, PermissionTarget } from '@/db/types';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { MultiSelectList } from '@/components/app/multi-select-list';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getRequest } from '@/lib/apiClient';
 
 interface User {
@@ -33,15 +43,32 @@ interface PermissionWithRelations extends Permission {
   organization?: Organization | null;
 }
 
+export interface PermissionFormData {
+  resourceId: string;
+  target: PermissionTarget;
+  userId: string | null;
+  roleId: string | null;
+  organizationId: string | null;
+  actionIds: string[];
+}
+
 interface PermissionFormProps {
   initialValues?: PermissionWithRelations | null;
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (values: PermissionFormData) => Promise<void>;
   loading?: boolean;
 }
 
+const emptyForm: PermissionFormData = {
+  resourceId: '',
+  target: PermissionTarget.ROLE,
+  userId: null,
+  roleId: null,
+  organizationId: null,
+  actionIds: [],
+};
+
 export function PermissionForm({ initialValues, onSubmit, loading }: PermissionFormProps) {
-  const [form] = Form.useForm();
-  const [targetType, setTargetType] = useState<PermissionTarget | null>(null);
+  const [values, setValues] = useState<PermissionFormData>(emptyForm);
   const [loadingData, setLoadingData] = useState(true);
   const [formData, setFormData] = useState<{
     resources: Resource[];
@@ -58,186 +85,203 @@ export function PermissionForm({ initialValues, onSubmit, loading }: PermissionF
   });
 
   useEffect(() => {
+    const fetchFormData = async () => {
+      setLoadingData(true);
+      try {
+        const [resources, actions, users, roles, organizations] = await Promise.all([
+          getRequest<Resource[]>('/administrations/resources'),
+          getRequest<Action[]>('/administrations/actions'),
+          getRequest<User[]>('/administrations/users'),
+          getRequest<Role[]>('/administrations/roles'),
+          getRequest<Organization[]>('/administrations/organizations'),
+        ]);
+
+        setFormData({ resources, actions, users, roles, organizations });
+      } catch (error) {
+        console.error('Error fetching form data:', error);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
     fetchFormData();
   }, []);
 
   useEffect(() => {
-    form.resetFields();
-    if (initialValues) {
-      form.setFieldsValue({
-        resourceId: initialValues.resourceId,
-        target: initialValues.target,
-        userId: initialValues.user?.id,
-        roleId: initialValues.role?.id,
-        organizationId: initialValues.organization?.id,
-        actionIds: initialValues.actions?.map((pa) => pa.action.id),
-      });
-      setTargetType(initialValues.target);
+    if (!initialValues) {
+      setValues(emptyForm);
+      return;
     }
-  }, [form, initialValues]);
 
-  const fetchFormData = async () => {
-    setLoadingData(true);
-    try {
-      const [resources, actions, users, roles, organizations] = await Promise.all([
-        getRequest<Resource[]>('/administrations/resources'),
-        getRequest<Action[]>('/administrations/actions'),
-        getRequest<User[]>('/administrations/users'),
-        getRequest<Role[]>('/administrations/roles'),
-        getRequest<Organization[]>('/administrations/organizations'),
-      ]);
-
-      setFormData({
-        resources,
-        actions,
-        users,
-        roles,
-        organizations,
-      });
-    } catch (error) {
-      console.error('Error fetching form data:', error);
-    } finally {
-      setLoadingData(false);
-    }
-  };
-
-  const handleSubmit = async (values: any) => {
-    try {
-      await onSubmit(values);
-      form.resetFields();
-      setTargetType(null);
-    } catch (error) {
-      console.error('Error submitting form:', error);
-    }
-  };
-
-  const handleTargetTypeChange = (value: PermissionTarget) => {
-    setTargetType(value);
-    form.setFieldsValue({
-      userId: undefined,
-      roleId: undefined,
-      organizationId: undefined,
+    setValues({
+      resourceId: initialValues.resourceId,
+      target: initialValues.target,
+      userId: initialValues.user?.id ?? null,
+      roleId: initialValues.role?.id ?? null,
+      organizationId: initialValues.organization?.id ?? null,
+      actionIds: initialValues.actions?.map((permissionAction) => permissionAction.action.id) ?? [],
     });
+  }, [initialValues]);
+
+  const updateTarget = (target: PermissionTarget) => {
+    setValues((current) => ({
+      ...current,
+      target,
+      userId: null,
+      roleId: null,
+      organizationId: null,
+    }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await onSubmit(values);
   };
 
   return (
-    <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={loadingData}>
-      <Form.Item
-        name="resourceId"
-        label="Resource"
-        rules={[{ required: true, message: 'Please select a resource' }]}
-      >
-        <Select
-          placeholder="Select resource"
-          loading={loadingData}
-          options={formData.resources.map((resource) => ({
-            label: `${resource.name} (${resource.slug})`,
-            value: resource.id,
-          }))}
-          showSearch
-          optionFilterProp="label"
-        />
-      </Form.Item>
-
-      <Form.Item
-        name="target"
-        label="Target Type"
-        rules={[{ required: true, message: 'Please select a target type' }]}
-      >
-        <Select
-          placeholder="Select target type"
-          onChange={handleTargetTypeChange}
-          options={[
-            { label: 'User', value: 'USER' },
-            { label: 'Role', value: 'ROLE' },
-            { label: 'Organization', value: 'ORGANIZATION' },
-          ]}
-        />
-      </Form.Item>
-
-      {targetType === 'USER' && (
-        <Form.Item
-          name="userId"
-          label="User"
-          rules={[{ required: true, message: 'Please select a user' }]}
-        >
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        <Field>
+          <FieldLabel>Resource</FieldLabel>
           <Select
-            placeholder="Select user"
-            loading={loadingData}
-            options={formData.users.map((user) => ({
-              label: `${user.firstName} ${user.lastName} (${user.email})`,
-              value: user.id,
-            }))}
-            showSearch
-            optionFilterProp="label"
-          />
-        </Form.Item>
-      )}
+            value={values.resourceId}
+            onValueChange={(resourceId) =>
+              setValues((current) => ({ ...current, resourceId: String(resourceId) }))
+            }
+            disabled={loadingData}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select resource" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {formData.resources.map((resource) => (
+                  <SelectItem key={resource.id} value={resource.id}>
+                    {resource.name} ({resource.slug})
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
 
-      {targetType === 'ROLE' && (
-        <Form.Item
-          name="roleId"
-          label="Role"
-          rules={[{ required: true, message: 'Please select a role' }]}
-        >
+        <Field>
+          <FieldLabel>Target type</FieldLabel>
           <Select
-            placeholder="Select role"
-            loading={loadingData}
-            options={formData.roles.map((role) => ({
-              label: `${role.name}${role.organizationId ? ' (Organization Role)' : ' (Global Role)'}`,
-              value: role.id,
-            }))}
-            showSearch
-            optionFilterProp="label"
-          />
-        </Form.Item>
-      )}
+            value={values.target}
+            onValueChange={(target) => updateTarget(target as PermissionTarget)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select target type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={PermissionTarget.USER}>User</SelectItem>
+                <SelectItem value={PermissionTarget.ROLE}>Role</SelectItem>
+                <SelectItem value={PermissionTarget.ORGANIZATION}>Organization</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
 
-      {targetType === 'ORGANIZATION' && (
-        <Form.Item
-          name="organizationId"
-          label="Organization"
-          rules={[{ required: true, message: 'Please select an organization' }]}
+        {values.target === PermissionTarget.USER && (
+          <Field>
+            <FieldLabel>User</FieldLabel>
+            <Select
+              value={values.userId ?? ''}
+              onValueChange={(userId) => setValues((current) => ({ ...current, userId }))}
+              disabled={loadingData}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select user" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {formData.users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {[user.firstName, user.lastName].filter(Boolean).join(' ') || user.email}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+
+        {values.target === PermissionTarget.ROLE && (
+          <Field>
+            <FieldLabel>Role</FieldLabel>
+            <Select
+              value={values.roleId ?? ''}
+              onValueChange={(roleId) => setValues((current) => ({ ...current, roleId }))}
+              disabled={loadingData}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {formData.roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                      {role.organizationId ? ' (Organization)' : ' (Global)'}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+
+        {values.target === PermissionTarget.ORGANIZATION && (
+          <Field>
+            <FieldLabel>Organization</FieldLabel>
+            <Select
+              value={values.organizationId ?? ''}
+              onValueChange={(organizationId) =>
+                setValues((current) => ({ ...current, organizationId }))
+              }
+              disabled={loadingData}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select organization" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {formData.organizations.map((organization) => (
+                    <SelectItem key={organization.id} value={organization.id}>
+                      {organization.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+
+        <Field>
+          <FieldLabel>Actions</FieldLabel>
+          <MultiSelectList
+            value={values.actionIds}
+            disabled={loadingData}
+            emptyText={loadingData ? 'Loading actions...' : 'No actions available.'}
+            options={formData.actions.map((action) => ({
+              value: action.id,
+              label: action.name,
+              description: action.slug,
+            }))}
+            onChange={(actionIds) => setValues((current) => ({ ...current, actionIds }))}
+          />
+        </Field>
+
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={loading || loadingData || !values.resourceId || values.actionIds.length === 0}
         >
-          <Select
-            placeholder="Select organization"
-            loading={loadingData}
-            options={formData.organizations.map((org) => ({
-              label: org.name,
-              value: org.id,
-            }))}
-            showSearch
-            optionFilterProp="label"
-          />
-        </Form.Item>
-      )}
-
-      <Form.Item
-        name="actionIds"
-        label="Actions"
-        rules={[{ required: true, message: 'Please select at least one action' }]}
-      >
-        <Select
-          placeholder="Select actions"
-          mode="multiple"
-          loading={loadingData}
-          options={formData.actions.map((action) => ({
-            label: `${action.name} (${action.slug})`,
-            value: action.id,
-          }))}
-          showSearch
-          optionFilterProp="label"
-        />
-      </Form.Item>
-
-      <Form.Item className="mb-0">
-        <Space className="w-full justify-end">
-          <Button onClick={() => form.resetFields()}>Reset</Button>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            {initialValues ? 'Update' : 'Create'} Permission
-          </Button>
-        </Space>
-      </Form.Item>
-    </Form>
+          {loading ? 'Saving...' : initialValues ? 'Update permission' : 'Create permission'}
+        </Button>
+      </FieldGroup>
+    </form>
   );
 }

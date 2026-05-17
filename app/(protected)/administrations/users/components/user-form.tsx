@@ -1,11 +1,22 @@
 'use client';
 
-import { Form, Input, Select, Button } from 'antd';
+import { FormEvent, useEffect, useState } from 'react';
 import { User, UserStatus } from '@/db/types';
-import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { MultiSelectList } from '@/components/app/multi-select-list';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getRequest } from '@/lib/apiClient';
 
-type UserFormData = Omit<
+export type UserFormData = Omit<
   User,
   'id' | 'name' | 'image' | 'passwordHash' | 'createdAt' | 'updatedAt' | 'emailVerified' | 'avatar'
 > & {
@@ -17,7 +28,7 @@ interface UserRole {
   role: {
     id: string;
     name: string;
-    description: string;
+    description: string | null;
   };
 }
 
@@ -34,29 +45,34 @@ interface UserFormProps {
 interface Role {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   isDefault: boolean;
 }
 
+const emptyForm: UserFormData = {
+  email: '',
+  password: '',
+  firstName: null,
+  lastName: null,
+  phone: null,
+  status: UserStatus.ACTIVE,
+  roleIds: [],
+};
+
 export function UserForm({ initialValues, onSubmit, loading }: UserFormProps) {
-  const [form] = Form.useForm();
+  const [values, setValues] = useState<UserFormData>(emptyForm);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
 
   useEffect(() => {
-    form.resetFields();
-    if (initialValues) {
-      if (initialValues.userRoles) {
-        const roleIds = initialValues.userRoles.map((ur) => ur.role.id);
-        form.setFieldsValue({
-          ...initialValues,
-          roleIds,
-        });
-      } else {
-        form.setFieldsValue(initialValues);
-      }
-    }
-  }, [form, initialValues]);
+    const roleIds = initialValues?.userRoles?.map((userRole) => userRole.role.id) ?? [];
+    setValues({
+      ...emptyForm,
+      ...initialValues,
+      password: '',
+      roleIds,
+    });
+  }, [initialValues]);
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -68,9 +84,7 @@ export function UserForm({ initialValues, onSubmit, loading }: UserFormProps) {
         if (!initialValues) {
           const defaultRole = data.find((role) => role.isDefault);
           if (defaultRole) {
-            form.setFieldsValue({
-              roleIds: [defaultRole.id],
-            });
+            setValues((current) => ({ ...current, roleIds: [defaultRole.id] }));
           }
         }
       } catch (error) {
@@ -81,90 +95,114 @@ export function UserForm({ initialValues, onSubmit, loading }: UserFormProps) {
     };
 
     fetchRoles();
-  }, [form, initialValues]);
+  }, [initialValues]);
+
+  const updateValue = <K extends keyof UserFormData>(key: K, value: UserFormData[K]) => {
+    setValues((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await onSubmit(values);
+  };
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={onSubmit}
-      initialValues={{
-        roleIds: [],
-        status: UserStatus.ACTIVE,
-        ...initialValues,
-      }}
-    >
-      <Form.Item
-        label="Email"
-        name="email"
-        rules={[
-          { required: true, message: 'Please input email' },
-          { type: 'email', message: 'Please enter a valid email' },
-        ]}
-      >
-        <Input />
-      </Form.Item>
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <Input
+            id="email"
+            type="email"
+            value={values.email}
+            onChange={(event) => updateValue('email', event.target.value)}
+            required
+          />
+        </Field>
 
-      {!initialValues && (
-        <Form.Item
-          label="Password"
-          name="password"
-          rules={[{ required: true, message: 'Please input password' }]}
-        >
-          <Input.Password />
-        </Form.Item>
-      )}
+        <Field>
+          <FieldLabel htmlFor="password">{initialValues ? 'New password' : 'Password'}</FieldLabel>
+          <Input
+            id="password"
+            type="password"
+            value={values.password ?? ''}
+            onChange={(event) => updateValue('password', event.target.value)}
+            required={!initialValues}
+            minLength={initialValues ? undefined : 8}
+          />
+          {initialValues && (
+            <FieldDescription>Leave blank to keep the current password.</FieldDescription>
+          )}
+        </Field>
 
-      {initialValues && (
-        <Form.Item
-          label="New Password"
-          name="password"
-          extra="Leave blank to keep current password"
-        >
-          <Input.Password />
-        </Form.Item>
-      )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="firstName">First name</FieldLabel>
+            <Input
+              id="firstName"
+              value={values.firstName ?? ''}
+              onChange={(event) => updateValue('firstName', event.target.value || null)}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+            <Input
+              id="lastName"
+              value={values.lastName ?? ''}
+              onChange={(event) => updateValue('lastName', event.target.value || null)}
+            />
+          </Field>
+        </div>
 
-      <Form.Item label="First Name" name="firstName">
-        <Input />
-      </Form.Item>
+        <Field>
+          <FieldLabel htmlFor="phone">Phone</FieldLabel>
+          <Input
+            id="phone"
+            value={values.phone ?? ''}
+            onChange={(event) => updateValue('phone', event.target.value || null)}
+          />
+        </Field>
 
-      <Form.Item label="Last Name" name="lastName">
-        <Input />
-      </Form.Item>
+        <Field>
+          <FieldLabel>Roles</FieldLabel>
+          <MultiSelectList
+            value={values.roleIds ?? []}
+            disabled={loadingRoles}
+            emptyText={loadingRoles ? 'Loading roles...' : 'No roles available.'}
+            options={roles.map((role) => ({
+              value: role.id,
+              label: role.name,
+              description: role.description ?? undefined,
+            }))}
+            onChange={(roleIds) => updateValue('roleIds', roleIds)}
+          />
+        </Field>
 
-      <Form.Item label="Phone" name="phone">
-        <Input />
-      </Form.Item>
+        <Field>
+          <FieldLabel>Status</FieldLabel>
+          <Select
+            value={values.status}
+            onValueChange={(status) => updateValue('status', status as UserStatus)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {Object.values(UserStatus).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
 
-      <Form.Item label="Roles" name="roleIds">
-        <Select
-          mode="multiple"
-          placeholder="Select roles"
-          loading={loadingRoles}
-          optionFilterProp="children"
-        >
-          {roles.map((role) => (
-            <Select.Option key={role.id} value={role.id}>
-              {role.name}
-            </Select.Option>
-          ))}
-        </Select>
-      </Form.Item>
-
-      <Form.Item label="Status" name="status">
-        <Select>
-          <Select.Option value={UserStatus.ACTIVE}>Active</Select.Option>
-          <Select.Option value={UserStatus.INACTIVE}>Inactive</Select.Option>
-          <Select.Option value={UserStatus.SUSPENDED}>Suspended</Select.Option>
-        </Select>
-      </Form.Item>
-
-      <Form.Item>
-        <Button type="primary" htmlType="submit" loading={loading} block>
-          {initialValues ? 'Update User' : 'Create User'}
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Saving...' : initialValues ? 'Update user' : 'Create user'}
         </Button>
-      </Form.Item>
-    </Form>
+      </FieldGroup>
+    </form>
   );
 }

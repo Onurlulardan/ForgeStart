@@ -1,123 +1,156 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Form, Input, Button, Select, Switch, Divider, Space } from 'antd';
+import { FormEvent, useEffect, useState } from 'react';
 import { Role, Organization } from '@/db/types';
-import { useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { getRequest } from '@/lib/apiClient';
+
+export interface RoleFormData {
+  name: string;
+  description: string | null;
+  isDefault: boolean;
+  organizationId: string | null;
+}
 
 interface RoleFormProps {
   initialValues?: Role | null;
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (values: RoleFormData) => Promise<void>;
   loading?: boolean;
 }
 
+const emptyForm: RoleFormData = {
+  name: '',
+  description: null,
+  isDefault: false,
+  organizationId: null,
+};
+
 export function RoleForm({ initialValues, onSubmit, loading }: RoleFormProps) {
-  const [form] = Form.useForm();
-  const { data: session } = useSession();
+  const [values, setValues] = useState<RoleFormData>(emptyForm);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
   useEffect(() => {
-    form.resetFields();
-    if (initialValues) {
-      form.setFieldsValue({
-        name: initialValues.name,
-        description: initialValues.description,
-        isDefault: initialValues.isDefault,
-        organizationId: initialValues.organizationId,
-      });
-    }
-  }, [form, initialValues]);
+    setValues({
+      name: initialValues?.name ?? '',
+      description: initialValues?.description ?? null,
+      isDefault: initialValues?.isDefault ?? false,
+      organizationId: initialValues?.organizationId ?? null,
+    });
+  }, [initialValues]);
 
   useEffect(() => {
+    const fetchOrganizations = async () => {
+      setLoadingOrgs(true);
+      try {
+        const data = await getRequest<Organization[]>('/administrations/organizations');
+        setOrganizations(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoadingOrgs(false);
+      }
+    };
+
     fetchOrganizations();
   }, []);
 
-  const fetchOrganizations = async () => {
-    setLoadingOrgs(true);
-    try {
-      const data = await getRequest<Organization[]>('/administrations/organizations');
-      setOrganizations(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoadingOrgs(false);
-    }
-  };
-
-  const handleSubmit = async (values: any) => {
-    try {
-      await onSubmit(values);
-      form.resetFields();
-    } catch (error) {
-      console.error(error);
-    }
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await onSubmit(values);
   };
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={handleSubmit}
-      initialValues={{
-        isDefault: false,
-      }}
-    >
-      <Form.Item
-        name="name"
-        label="Role Name"
-        rules={[
-          { required: true, message: 'Please enter role name' },
-          { min: 3, message: 'Role name must be at least 3 characters' },
-        ]}
-      >
-        <Input placeholder="Enter role name" />
-      </Form.Item>
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="roleName">Role name</FieldLabel>
+          <Input
+            id="roleName"
+            value={values.name}
+            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
+            minLength={3}
+            required
+          />
+        </Field>
 
-      <Form.Item
-        name="description"
-        label="Description"
-        rules={[{ max: 500, message: 'Description cannot be longer than 500 characters' }]}
-      >
-        <Input.TextArea placeholder="Enter role description" rows={4} showCount maxLength={500} />
-      </Form.Item>
+        <Field>
+          <FieldLabel htmlFor="roleDescription">Description</FieldLabel>
+          <Textarea
+            id="roleDescription"
+            rows={4}
+            maxLength={500}
+            value={values.description ?? ''}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, description: event.target.value || null }))
+            }
+          />
+        </Field>
 
-      <Form.Item
-        name="organizationId"
-        label="Organization"
-        help="Leave empty to create a global role"
-      >
-        <Select
-          placeholder="Select organization"
-          allowClear
-          loading={loadingOrgs}
-          options={organizations.map((org) => ({
-            label: org.name,
-            value: org.id,
-          }))}
-        />
-      </Form.Item>
+        <Field>
+          <FieldLabel>Organization</FieldLabel>
+          <Select
+            value={values.organizationId ?? 'global'}
+            onValueChange={(value) =>
+              setValues((current) => ({
+                ...current,
+                organizationId: value === 'global' ? null : value,
+              }))
+            }
+            disabled={loadingOrgs}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select organization" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="global">Global role</SelectItem>
+                {organizations.map((organization) => (
+                  <SelectItem key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <FieldDescription>Global roles apply across all organizations.</FieldDescription>
+        </Field>
 
-      <Form.Item
-        name="isDefault"
-        label="Default Role"
-        valuePropName="checked"
-        help="Default roles are automatically assigned to new members"
-      >
-        <Switch />
-      </Form.Item>
+        <Field orientation="horizontal">
+          <Switch
+            checked={values.isDefault}
+            onCheckedChange={(checked) =>
+              setValues((current) => ({ ...current, isDefault: Boolean(checked) }))
+            }
+            aria-label="Default role"
+          />
+          <div>
+            <FieldLabel>Default role</FieldLabel>
+            <FieldDescription>Automatically assign this role to new members.</FieldDescription>
+          </div>
+        </Field>
 
-      <Divider />
-
-      <Form.Item className="mb-0">
-        <Space className="w-full justify-end">
-          <Button onClick={() => form.resetFields()}>Reset</Button>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            {initialValues ? 'Update' : 'Create'} Role
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => setValues(emptyForm)}>
+            Reset
           </Button>
-        </Space>
-      </Form.Item>
-    </Form>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Saving...' : initialValues ? 'Update role' : 'Create role'}
+          </Button>
+        </div>
+      </FieldGroup>
+    </form>
   );
 }

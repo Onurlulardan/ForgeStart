@@ -1,36 +1,50 @@
 'use client';
 
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Form, Input, Button } from 'antd';
-import { UserOutlined, LockOutlined, PhoneOutlined, MailOutlined } from '@ant-design/icons';
 import { signIn } from 'next-auth/react';
+import { LockIcon, MailIcon, PhoneIcon, UserIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { postRequest } from '@/lib/apiClient';
 import { useNotification } from '@/contexts/NotificationContext';
 
 type FormValues = {
   email: string;
   password: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+};
+
+const initialValues: FormValues = {
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+  phone: '',
 };
 
 export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
+  const [values, setValues] = useState<FormValues>(initialValues);
   const router = useRouter();
-  const [form] = Form.useForm();
   const { showNotification } = useNotification();
 
-  const onFinish = async (values: FormValues) => {
+  const updateValue = (key: keyof FormValues, value: string) => {
+    setValues((current) => ({ ...current, [key]: value }));
+  };
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setLoading(true);
+
     try {
       await postRequest('/api/auth/register', values);
+      showNotification('success', 'Account created', 'Your workspace account is ready.');
 
-      showNotification('success', 'Success', 'Account created successfully');
-
-      // Auto login after successful registration
       const result = await signIn('credentials', {
         email: values.email,
         password: values.password,
@@ -38,15 +52,15 @@ export default function RegisterForm() {
       });
 
       if (result?.error) {
-        showNotification('error', 'Login Failed', 'Account created but automatic login failed');
+        showNotification('error', 'Login failed', 'Account created but automatic login failed');
         return;
       }
 
-      router.push('/');
+      router.push('/dashboard');
     } catch (error) {
       showNotification(
         'error',
-        'Registration Failed',
+        'Registration failed',
         error instanceof Error ? error.message : 'Failed to create account'
       );
     } finally {
@@ -55,54 +69,105 @@ export default function RegisterForm() {
   };
 
   return (
-    <Form form={form} name="register" onFinish={onFinish} layout="vertical" requiredMark={false}>
-      <div className="grid grid-cols-2 gap-4">
-        <Form.Item name="firstName" label="First Name">
-          <Input prefix={<UserOutlined />} placeholder="First Name" />
-        </Form.Item>
+    <form onSubmit={onSubmit}>
+      <FieldGroup>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="firstName">First name</FieldLabel>
+            <InputGroup>
+              <InputGroupAddon>
+                <UserIcon />
+              </InputGroupAddon>
+              <InputGroupInput
+                id="firstName"
+                value={values.firstName}
+                onChange={(event) => updateValue('firstName', event.target.value)}
+                placeholder="Super"
+              />
+            </InputGroup>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+            <InputGroup>
+              <InputGroupAddon>
+                <UserIcon />
+              </InputGroupAddon>
+              <InputGroupInput
+                id="lastName"
+                value={values.lastName}
+                onChange={(event) => updateValue('lastName', event.target.value)}
+                placeholder="Admin"
+              />
+            </InputGroup>
+          </Field>
+        </div>
 
-        <Form.Item name="lastName" label="Last Name">
-          <Input prefix={<UserOutlined />} placeholder="Last Name" />
-        </Form.Item>
-      </div>
+        <Field>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <InputGroup>
+            <InputGroupAddon>
+              <MailIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={values.email}
+              onChange={(event) => updateValue('email', event.target.value)}
+              placeholder="you@example.com"
+              required
+            />
+          </InputGroup>
+        </Field>
 
-      <Form.Item
-        name="email"
-        label="Email"
-        rules={[
-          { required: true, message: 'Please input your email!' },
-          { type: 'email', message: 'Please enter a valid email!' },
-        ]}
-      >
-        <Input prefix={<MailOutlined />} placeholder="Email" />
-      </Form.Item>
+        <Field>
+          <FieldLabel htmlFor="password">Password</FieldLabel>
+          <InputGroup>
+            <InputGroupAddon>
+              <LockIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={values.password}
+              onChange={(event) => updateValue('password', event.target.value)}
+              placeholder="At least 8 characters"
+              required
+            />
+          </InputGroup>
+        </Field>
 
-      <Form.Item
-        name="password"
-        label="Password"
-        rules={[
-          { required: true, message: 'Please input your password!' },
-          { min: 8, message: 'Password must be at least 8 characters!' },
-        ]}
-      >
-        <Input.Password prefix={<LockOutlined />} placeholder="Password" />
-      </Form.Item>
+        <Field>
+          <FieldLabel htmlFor="phone">Phone</FieldLabel>
+          <InputGroup>
+            <InputGroupAddon>
+              <PhoneIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              id="phone"
+              value={values.phone}
+              onChange={(event) => updateValue('phone', event.target.value)}
+              placeholder="+1 555 000 0000"
+            />
+          </InputGroup>
+        </Field>
 
-      <Form.Item name="phone" label="Phone Number">
-        <Input prefix={<PhoneOutlined />} placeholder="Phone Number" />
-      </Form.Item>
-
-      <Form.Item>
-        <Button type="primary" htmlType="submit" loading={loading} block>
-          Create Account
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Creating account...' : 'Create account'}
         </Button>
-      </Form.Item>
 
-      <div className="text-center">
-        <Link href="/auth/login" className="text-blue-600 hover:text-blue-700">
-          Already have an account? Sign in
-        </Link>
-      </div>
-    </Form>
+        <p className="text-center text-sm text-muted-foreground">
+          Already have an account?{' '}
+          <Link
+            href="/auth/login"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Sign in
+          </Link>
+        </p>
+      </FieldGroup>
+    </form>
   );
 }

@@ -1,8 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Drawer, Form, Select, Button } from 'antd';
+import { FormEvent, useEffect, useState } from 'react';
 import { Organization, User } from '@/db/types';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { MultiSelectList } from '@/components/app/multi-select-list';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { getRequest, postRequest } from '@/lib/apiClient';
 
 interface AddUsersDrawerProps {
@@ -12,37 +21,40 @@ interface AddUsersDrawerProps {
 }
 
 export function AddUsersDrawer({ organization, open, onClose }: AddUsersDrawerProps) {
-  const [form] = Form.useForm();
   const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      fetchAvailableUsers();
-    }
+    if (!open) return;
+
+    const fetchAvailableUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const data = await getRequest<User[]>('/administrations/users/available');
+        setUsers(data);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchAvailableUsers();
   }, [open]);
 
-  const fetchAvailableUsers = async () => {
-    try {
-      const data = await getRequest<User[]>('/administrations/users/available');
-      setUsers(data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    }
-  };
-
-  const handleSubmit = async (values: { userIds: string[] }) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!organization) return;
 
     try {
       setLoading(true);
-      const result = await postRequest(
-        `/administrations/organizations/${organization.id}/add-users`,
-        { userIds: values.userIds }
-      );
-      form.resetFields();
+      await postRequest(`/administrations/organizations/${organization.id}/add-users`, {
+        userIds: selectedUserIds,
+      });
+      setSelectedUserIds([]);
       onClose();
-      return result;
     } catch (error) {
       console.error('Failed to add users:', error);
     } finally {
@@ -50,43 +62,39 @@ export function AddUsersDrawer({ organization, open, onClose }: AddUsersDrawerPr
     }
   };
 
-  if (!organization) return null;
-
   return (
-    <Drawer
-      title={`Add Users to ${organization.name}`}
-      placement="right"
-      onClose={onClose}
-      open={open}
-      width={720}
-    >
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Form.Item
-          name="userIds"
-          label="Select Users"
-          rules={[{ required: true, message: 'Please select users' }]}
-        >
-          <Select
-            mode="multiple"
-            placeholder="Select users to add"
-            style={{ width: '100%' }}
-            optionFilterProp="children"
-            loading={!users.length}
-          >
-            {users.map((user) => (
-              <Select.Option key={user.id} value={user.id}>
-                {user.firstName} {user.lastName} ({user.email})
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading} block>
-            Add Users
-          </Button>
-        </Form.Item>
-      </Form>
-    </Drawer>
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle>Add users to {organization?.name ?? 'organization'}</SheetTitle>
+          <SheetDescription>Select existing users that are not already members.</SheetDescription>
+        </SheetHeader>
+        <form className="px-4 pb-4" onSubmit={handleSubmit}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel>Users</FieldLabel>
+              <MultiSelectList
+                value={selectedUserIds}
+                disabled={loadingUsers}
+                emptyText={loadingUsers ? 'Loading users...' : 'No available users.'}
+                options={users.map((user) => ({
+                  value: user.id,
+                  label: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
+                  description: user.email,
+                }))}
+                onChange={setSelectedUserIds}
+              />
+            </Field>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || selectedUserIds.length === 0}
+            >
+              {loading ? 'Adding users...' : 'Add users'}
+            </Button>
+          </FieldGroup>
+        </form>
+      </SheetContent>
+    </Sheet>
   );
 }

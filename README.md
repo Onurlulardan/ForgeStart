@@ -1,8 +1,8 @@
 # NextJS Starter
 
 Modern full-stack starter template built with Next.js 16, React 19, Auth.js v5,
-Drizzle ORM, PostgreSQL, Ant Design 6, Docker, Yarn 4, TypeScript, Vitest and
-Playwright.
+Drizzle ORM, PostgreSQL, shadcn/ui, Tailwind CSS 4, Docker, Yarn 4, TypeScript,
+Vitest and Playwright.
 
 The intended developer experience is simple:
 
@@ -22,7 +22,7 @@ and starts the Next.js app at `http://localhost:3000`.
 
 - Framework: Next.js 16 App Router
 - Runtime: React 19
-- UI: Ant Design 6
+- UI: shadcn/ui, Base UI primitives, Lucide icons, Tailwind CSS 4
 - Auth: Auth.js v5 with credentials provider
 - Database: PostgreSQL
 - ORM and migrations: Drizzle ORM / Drizzle Kit
@@ -161,7 +161,7 @@ This is a breaking release.
   database, or write a one-off data migration for your production data.
 - npm lockfiles are not supported. Use Yarn 4 only.
 - `middleware.ts` moved to the Next.js 16 `proxy.ts` convention.
-- Ant Design v6 no longer needs the React 19 v5 patch package.
+- Ant Design was removed in favor of source-owned shadcn/ui components.
 
 ## Quality Gate
 

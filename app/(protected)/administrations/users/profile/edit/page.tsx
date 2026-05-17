@@ -1,34 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import {
-  Button,
-  Form,
-  Input,
-  Card,
-  Typography,
-  Avatar,
-  Row,
-  Col,
-  Divider,
-  Upload,
-  Tabs,
-} from 'antd';
-import {
-  UserOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  CameraOutlined,
-  SaveOutlined,
-  LockOutlined,
-} from '@ant-design/icons';
-import type { UploadChangeParam } from 'antd/es/upload';
-import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
+import { LockIcon, SaveIcon } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageHeader } from '@/components/app/page-header';
 import { putRequest } from '@/lib/apiClient';
-
-const { Title, Text } = Typography;
 
 interface ProfileFormData {
   firstName: string;
@@ -44,30 +27,64 @@ interface ProfileResponse {
   phone: string | null;
 }
 
-interface PasswordFormData {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
+function initials(firstName?: string | null, lastName?: string | null, email?: string | null) {
+  return (
+    [firstName, lastName]
+      .filter(Boolean)
+      .map((part) => part?.[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() ||
+    email?.slice(0, 2).toUpperCase() ||
+    'NS'
+  );
 }
 
 export default function ProfileEditPage() {
   const [loading, setLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string>();
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const router = useRouter();
   const { data: session, update: updateSession } = useSession();
+  const user = session?.user;
+  const [profileValues, setProfileValues] = useState<ProfileFormData>({
+    firstName: user?.firstName ?? '',
+    lastName: user?.lastName ?? '',
+    phone: user?.phone ?? '',
+    avatar: user?.avatar ?? '',
+  });
+  const [passwordValues, setPasswordValues] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
-  const handleProfileSubmit = async (values: ProfileFormData) => {
+  useEffect(() => {
+    if (!user) return;
+    setProfileValues({
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      phone: user.phone ?? '',
+      avatar: user.avatar ?? '',
+    });
+  }, [user]);
+
+  if (!user) {
+    return null;
+  }
+
+  const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setLoading(true);
     try {
-      const updatedUser = await putRequest<ProfileResponse>('/administrations/profile', {
-        ...values,
-        avatar: avatarUrl,
-      });
+      const updatedUser = await putRequest<ProfileResponse>(
+        '/administrations/profile',
+        profileValues
+      );
 
       await updateSession({
         ...session,
         user: {
-          ...session?.user,
+          ...user,
           firstName: updatedUser.firstName,
           lastName: updatedUser.lastName,
           avatar: updatedUser.avatar,
@@ -83,201 +100,225 @@ export default function ProfileEditPage() {
     }
   };
 
-  const handlePasswordSubmit = async (values: PasswordFormData) => {
-    setLoading(true);
+  const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (passwordValues.newPassword !== passwordValues.confirmPassword) return;
+
+    setPasswordLoading(true);
     try {
       await putRequest('/administrations/profile', {
-        currentPassword: values.currentPassword,
-        newPassword: values.newPassword,
+        currentPassword: passwordValues.currentPassword,
+        newPassword: passwordValues.newPassword,
       });
-
+      setPasswordValues({ currentPassword: '', newPassword: '', confirmPassword: '' });
       router.refresh();
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
-
-  const handleAvatarChange: UploadProps['onChange'] = async (
-    info: UploadChangeParam<UploadFile>
-  ) => {
-    if (info.file.status === 'done') {
-      setAvatarUrl(info.file.response.url);
-    }
-  };
-
-  if (!session?.user) {
-    return null;
-  }
 
   return (
-    <div className="max-w-[1000px] mx-auto p-6">
-      <Card>
-        <Row gutter={[24, 24]}>
-          {/* Sol Taraf - Avatar ve Temel Bilgiler */}
-          <Col xs={24} md={8}>
-            <div className="flex justify-center items-center  h-full">
-              <div className="text-center">
-                <Upload
-                  name="avatar"
-                  listType="picture-circle"
-                  showUploadList={false}
-                  action="/api/administrations/upload"
-                  onChange={handleAvatarChange}
-                >
-                  {avatarUrl || session.user.avatar ? (
-                    <Avatar size={120} src={avatarUrl || session.user.avatar} alt="avatar" />
-                  ) : (
-                    <div>
-                      <CameraOutlined className="text-2xl" />
-                      <div className="mt-2">Upload</div>
-                    </div>
-                  )}
-                </Upload>
-                <Title level={4} className="mt-4 mb-1">
-                  {session.user.firstName} {session.user.lastName}
-                </Title>
-                <Text type="secondary">{session.user.email}</Text>
-              </div>
+    <>
+      <PageHeader
+        title="Profile settings"
+        description="Manage your account identity and password."
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+        <Card className="rounded-lg">
+          <CardContent className="flex flex-col items-center p-6 text-center">
+            <Avatar className="size-24">
+              <AvatarImage
+                src={profileValues.avatar || user.avatar || undefined}
+                alt={user.email ?? 'User'}
+              />
+              <AvatarFallback>{initials(user.firstName, user.lastName, user.email)}</AvatarFallback>
+            </Avatar>
+            <h2 className="mt-4 text-lg font-semibold">
+              {[user.firstName, user.lastName].filter(Boolean).join(' ') || user.email}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
+            <div className="mt-6 w-full rounded-lg border bg-muted/40 p-3 text-left text-xs leading-5 text-muted-foreground">
+              Avatar is stored as a URL. This keeps the starter storage-agnostic until a project
+              chooses S3, UploadThing or another file layer.
             </div>
-          </Col>
+          </CardContent>
+        </Card>
 
-          {/* Sağ Taraf - Tabs */}
-          <Col xs={24} md={16}>
-            <Tabs
-              defaultActiveKey="profile"
-              items={[
-                {
-                  key: 'profile',
-                  label: 'Profile Settings',
-                  children: (
-                    <Form
-                      layout="vertical"
-                      initialValues={{
-                        firstName: session.user.firstName || '',
-                        lastName: session.user.lastName || '',
-                        email: session.user.email,
-                        phone: session.user.phone || '',
-                      }}
-                      onFinish={handleProfileSubmit}
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Account</CardTitle>
+            <CardDescription>
+              Update profile fields without changing authentication state.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="profile">
+              <TabsList>
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="password">Password</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="profile" className="mt-5">
+                <form onSubmit={handleProfileSubmit}>
+                  <FieldGroup>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel htmlFor="firstName">First name</FieldLabel>
+                        <Input
+                          id="firstName"
+                          value={profileValues.firstName}
+                          onChange={(event) =>
+                            setProfileValues((current) => ({
+                              ...current,
+                              firstName: event.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+                        <Input
+                          id="lastName"
+                          value={profileValues.lastName}
+                          onChange={(event) =>
+                            setProfileValues((current) => ({
+                              ...current,
+                              lastName: event.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </Field>
+                    </div>
+
+                    <Field>
+                      <FieldLabel htmlFor="email">Email</FieldLabel>
+                      <Input id="email" value={user.email ?? ''} disabled />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="phone">Phone</FieldLabel>
+                      <Input
+                        id="phone"
+                        value={profileValues.phone ?? ''}
+                        onChange={(event) =>
+                          setProfileValues((current) => ({ ...current, phone: event.target.value }))
+                        }
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="avatar">Avatar URL</FieldLabel>
+                      <Input
+                        id="avatar"
+                        type="url"
+                        value={profileValues.avatar ?? ''}
+                        onChange={(event) =>
+                          setProfileValues((current) => ({
+                            ...current,
+                            avatar: event.target.value,
+                          }))
+                        }
+                      />
+                      <FieldDescription>Leave empty to use initials.</FieldDescription>
+                    </Field>
+
+                    <Button type="submit" disabled={loading}>
+                      <SaveIcon data-icon="inline-start" />
+                      {loading ? 'Saving...' : 'Save changes'}
+                    </Button>
+                  </FieldGroup>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="password" className="mt-5">
+                <form onSubmit={handlePasswordSubmit}>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="currentPassword">Current password</FieldLabel>
+                      <Input
+                        id="currentPassword"
+                        type="password"
+                        value={passwordValues.currentPassword}
+                        onChange={(event) =>
+                          setPasswordValues((current) => ({
+                            ...current,
+                            currentPassword: event.target.value,
+                          }))
+                        }
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="newPassword">New password</FieldLabel>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        minLength={8}
+                        value={passwordValues.newPassword}
+                        onChange={(event) =>
+                          setPasswordValues((current) => ({
+                            ...current,
+                            newPassword: event.target.value,
+                          }))
+                        }
+                        required
+                      />
+                    </Field>
+                    <Field
+                      data-invalid={Boolean(
+                        passwordValues.confirmPassword &&
+                        passwordValues.newPassword !== passwordValues.confirmPassword
+                      )}
                     >
-                      <Row gutter={16}>
-                        <Col xs={24} sm={12}>
-                          <Form.Item
-                            name="firstName"
-                            label="First Name"
-                            rules={[{ required: true, message: 'Please enter your first name' }]}
-                          >
-                            <Input prefix={<UserOutlined />} placeholder="First Name" />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                          <Form.Item
-                            name="lastName"
-                            label="Last Name"
-                            rules={[{ required: true, message: 'Please enter your last name' }]}
-                          >
-                            <Input prefix={<UserOutlined />} placeholder="Last Name" />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-
-                      <Form.Item name="email" label="Email">
-                        <Input prefix={<MailOutlined />} disabled />
-                      </Form.Item>
-
-                      <Form.Item
-                        name="phone"
-                        label="Phone Number"
-                        rules={[
-                          {
-                            pattern: /^[0-9+\-\s()]*$/,
-                            message: 'Please enter a valid phone number',
-                          },
-                        ]}
-                      >
-                        <Input prefix={<PhoneOutlined />} placeholder="Phone Number" />
-                      </Form.Item>
-
-                      <Form.Item>
-                        <Button
-                          type="primary"
-                          htmlType="submit"
-                          loading={loading}
-                          icon={<SaveOutlined />}
-                          size="large"
-                          block
-                        >
-                          Save Changes
-                        </Button>
-                      </Form.Item>
-                    </Form>
-                  ),
-                },
-                {
-                  key: 'password',
-                  label: 'Change Password',
-                  children: (
-                    <Form layout="vertical" onFinish={handlePasswordSubmit}>
-                      <Form.Item
-                        name="currentPassword"
-                        label="Current Password"
-                        rules={[{ required: true, message: 'Please enter your current password' }]}
-                      >
-                        <Input.Password prefix={<LockOutlined />} placeholder="Current Password" />
-                      </Form.Item>
-
-                      <Form.Item
-                        name="newPassword"
-                        label="New Password"
-                        rules={[
-                          { required: true, message: 'Please enter your new password' },
-                          { min: 8, message: 'Password must be at least 8 characters' },
-                        ]}
-                      >
-                        <Input.Password prefix={<LockOutlined />} placeholder="New Password" />
-                      </Form.Item>
-
-                      <Form.Item
-                        name="confirmPassword"
-                        label="Confirm Password"
-                        dependencies={['newPassword']}
-                        rules={[
-                          { required: true, message: 'Please confirm your new password' },
-                          ({ getFieldValue }) => ({
-                            validator(_, value) {
-                              if (!value || getFieldValue('newPassword') === value) {
-                                return Promise.resolve();
-                              }
-                              return Promise.reject(new Error('The two passwords do not match'));
-                            },
-                          }),
-                        ]}
-                      >
-                        <Input.Password prefix={<LockOutlined />} placeholder="Confirm Password" />
-                      </Form.Item>
-
-                      <Form.Item>
-                        <Button
-                          type="primary"
-                          htmlType="submit"
-                          loading={loading}
-                          icon={<LockOutlined />}
-                          size="large"
-                          block
-                        >
-                          Update Password
-                        </Button>
-                      </Form.Item>
-                    </Form>
-                  ),
-                },
-              ]}
-            />
-          </Col>
-        </Row>
-      </Card>
-    </div>
+                      <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        minLength={8}
+                        value={passwordValues.confirmPassword}
+                        onChange={(event) =>
+                          setPasswordValues((current) => ({
+                            ...current,
+                            confirmPassword: event.target.value,
+                          }))
+                        }
+                        aria-invalid={Boolean(
+                          passwordValues.confirmPassword &&
+                          passwordValues.newPassword !== passwordValues.confirmPassword
+                        )}
+                        required
+                      />
+                      {passwordValues.confirmPassword &&
+                        passwordValues.newPassword !== passwordValues.confirmPassword && (
+                          <FieldDescription className="text-destructive">
+                            Passwords do not match.
+                          </FieldDescription>
+                        )}
+                    </Field>
+                    <Button
+                      type="submit"
+                      disabled={
+                        passwordLoading ||
+                        !passwordValues.currentPassword ||
+                        !passwordValues.newPassword ||
+                        passwordValues.newPassword !== passwordValues.confirmPassword
+                      }
+                    >
+                      <LockIcon data-icon="inline-start" />
+                      {passwordLoading ? 'Updating...' : 'Update password'}
+                    </Button>
+                  </FieldGroup>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

@@ -1,68 +1,84 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Form, Input, Button, Space } from 'antd';
+import { FormEvent, useEffect, useState } from 'react';
 import { Resource } from '@/db/types';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+
+export interface ResourceFormData {
+  name: string;
+  slug: string;
+  description: string | null;
+}
 
 interface ResourceFormProps {
   initialValues?: Resource | null;
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (values: ResourceFormData) => Promise<void>;
   loading?: boolean;
 }
 
+const emptyForm: ResourceFormData = {
+  name: '',
+  slug: '',
+  description: null,
+};
+
 export function ResourceForm({ initialValues, onSubmit, loading }: ResourceFormProps) {
-  const [form] = Form.useForm();
+  const [values, setValues] = useState<ResourceFormData>(emptyForm);
 
   useEffect(() => {
-    form.resetFields();
-    if (initialValues) {
-      form.setFieldsValue({
-        name: initialValues.name,
-        slug: initialValues.slug,
-        description: initialValues.description,
-      });
-    }
-  }, [form, initialValues]);
+    setValues({
+      name: initialValues?.name ?? '',
+      slug: initialValues?.slug ?? '',
+      description: initialValues?.description ?? null,
+    });
+  }, [initialValues]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await onSubmit(values);
+  };
 
   return (
-    <Form form={form} layout="vertical" onFinish={onSubmit}>
-      <Form.Item
-        name="name"
-        label="Resource Name"
-        rules={[
-          { required: true, message: 'Please enter resource name' },
-          { min: 3, message: 'Resource name must be at least 3 characters' },
-        ]}
-      >
-        <Input placeholder="Enter resource name (e.g., USER, PRODUCT)" />
-      </Form.Item>
-
-      <Form.Item
-        name="slug"
-        label="Slug"
-        rules={[
-          { required: true, message: 'Please enter slug' },
-          {
-            pattern: /^[a-z0-9-]+$/,
-            message: 'Slug can only contain lowercase letters, numbers, and hyphens',
-          },
-        ]}
-      >
-        <Input placeholder="Enter slug (e.g., user, product)" />
-      </Form.Item>
-
-      <Form.Item name="description" label="Description">
-        <Input.TextArea rows={4} placeholder="Enter resource description" />
-      </Form.Item>
-
-      <Form.Item className="mb-0">
-        <Space className="w-full justify-end">
-          <Button onClick={() => form.resetFields()}>Reset</Button>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            {initialValues ? 'Update' : 'Create'} Resource
-          </Button>
-        </Space>
-      </Form.Item>
-    </Form>
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="resourceName">Resource name</FieldLabel>
+          <Input
+            id="resourceName"
+            value={values.name}
+            minLength={3}
+            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="resourceSlug">Slug</FieldLabel>
+          <Input
+            id="resourceSlug"
+            pattern="^[a-z0-9-_]+$"
+            value={values.slug}
+            onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))}
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="resourceDescription">Description</FieldLabel>
+          <Textarea
+            id="resourceDescription"
+            rows={4}
+            value={values.description ?? ''}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, description: event.target.value || null }))
+            }
+          />
+        </Field>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Saving...' : initialValues ? 'Update resource' : 'Create resource'}
+        </Button>
+      </FieldGroup>
+    </form>
   );
 }

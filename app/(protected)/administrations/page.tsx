@@ -1,31 +1,81 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import { Card, Typography, Button, Avatar } from 'antd';
-import {
-  TeamOutlined,
-  UserOutlined,
-  ApartmentOutlined,
-  SafetyCertificateOutlined,
-  LockOutlined,
-} from '@ant-design/icons';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import {
+  ArrowRightIcon,
+  Building2Icon,
+  KeyRoundIcon,
+  LockKeyholeIcon,
+  ShieldCheckIcon,
+  UserCogIcon,
+  UsersIcon,
+} from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { PageHeader } from '@/components/app/page-header';
+import { Badge } from '@/components/ui/badge';
 import { usePermission } from '@/lib/auth/client-permissions';
 
-const { Title, Text } = Typography;
+const adminCards = [
+  {
+    title: 'Users',
+    description: 'Create accounts, assign roles and control account status.',
+    href: '/administrations/users',
+    permission: ['user', 'view'],
+    icon: UsersIcon,
+  },
+  {
+    title: 'Organizations',
+    description: 'Maintain workspace hierarchy, membership and organization status.',
+    href: '/administrations/organizations',
+    permission: ['organization', 'view'],
+    icon: Building2Icon,
+  },
+  {
+    title: 'Roles',
+    description: 'Model global and organization-scoped access roles.',
+    href: '/administrations/roles',
+    permission: ['role', 'view'],
+    icon: ShieldCheckIcon,
+  },
+  {
+    title: 'Permissions',
+    description: 'Connect resources, actions and access targets in one place.',
+    href: '/administrations/permissions',
+    permission: ['permission', 'view'],
+    icon: KeyRoundIcon,
+  },
+  {
+    title: 'Security logs',
+    description: 'Review authentication attempts and security-relevant events.',
+    href: '/administrations/security-logs',
+    permission: ['security-log', 'view'],
+    icon: LockKeyholeIcon,
+  },
+] as const;
 
-const CARD_STYLES = {
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column' as const,
-};
-
-const CARD_BODY_STYLES = {
-  flex: 1,
-  display: 'flex',
-  flexDirection: 'column' as const,
-};
+function initials(firstName?: string | null, lastName?: string | null, email?: string | null) {
+  return (
+    [firstName, lastName]
+      .filter(Boolean)
+      .map((part) => part?.[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() ||
+    email?.slice(0, 2).toUpperCase() ||
+    'NS'
+  );
+}
 
 export default function AdministrationsPage() {
   const { data: session } = useSession();
@@ -34,224 +84,84 @@ export default function AdministrationsPage() {
   const canViewRoles = usePermission('role', 'view');
   const canViewPermissions = usePermission('permission', 'view');
   const canViewSecurityLogs = usePermission('security-log', 'view');
+  const permissions = {
+    user: canViewUsers,
+    organization: canViewOrganizations,
+    role: canViewRoles,
+    permission: canViewPermissions,
+    'security-log': canViewSecurityLogs,
+  };
 
   if (!session?.user) {
     redirect('/auth/login');
   }
 
-  const isAdmin = session.user.userRoles?.some((ur) => ur.role.name === 'ADMIN');
+  const user = session.user;
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <Title level={2}>
-          Welcome back, {session.user.firstName + ' ' + session.user.lastName || session.user.email}
-          !
-        </Title>
-        <Text type="secondary">Manage your organizations and workspace</Text>
-      </div>
+    <>
+      <PageHeader
+        title="Administration"
+        description="Operate users, organizations, roles and permissions from a single starter console."
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* User Profile Card */}
-        <Card style={CARD_STYLES} styles={{ body: CARD_BODY_STYLES }}>
-          <div className="flex flex-col h-full">
-            <div className="flex items-start space-x-4 mb-auto">
-              <Avatar
-                size={64}
-                icon={<UserOutlined />}
-                src={session.user.avatar}
-                className="flex-shrink-0"
-              />
-              <div className="flex-grow">
-                <Title level={4} className="!mb-2">
-                  {session.user.firstName} {session.user.lastName}
-                </Title>
-                <Text type="secondary" className="block mb-1">
-                  {session.user.email}
-                </Text>
-                <Text type="secondary" className="block">
-                  Roles: {session.user.userRoles?.map((ur) => ur.role.name).join(', ') || 'No Role'}
-                </Text>
-                <div className="flex flex-col space-y-2 mt-4">
-                  <Text strong className="block">
-                    Profile
-                  </Text>
-                  <Text type="secondary">View and edit your profile</Text>
-                </div>
+      <Card className="rounded-lg">
+        <CardContent className="flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <Avatar className="size-14">
+              <AvatarImage src={user.avatar ?? undefined} alt={user.email ?? 'User'} />
+              <AvatarFallback>{initials(user.firstName, user.lastName, user.email)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-semibold">{fullName || user.email}</h2>
+              <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {user.userRoles?.length ? (
+                  user.userRoles.map((userRole) => (
+                    <Badge key={userRole.role.id} variant="secondary" className="rounded-md">
+                      {userRole.role.name}
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge variant="secondary" className="rounded-md">
+                    No role
+                  </Badge>
+                )}
               </div>
-            </div>
-            <div className="mt-4 pt-4 border-t">
-              <Link href="/administrations/users/profile/edit">
-                <Button block>Edit Profile</Button>
-              </Link>
             </div>
           </div>
-        </Card>
+          <Button render={<Link href="/administrations/users/profile/edit" />} variant="outline">
+            <UserCogIcon data-icon="inline-start" />
+            Edit profile
+          </Button>
+        </CardContent>
+      </Card>
 
-        {/* Users Management Card */}
-        {canViewUsers && (
-          <Card style={CARD_STYLES} styles={{ body: CARD_BODY_STYLES }}>
-            <div className="flex flex-col h-full">
-              <Title level={4} className="flex items-center !mb-4">
-                <TeamOutlined className="mr-2" /> Users Management
-              </Title>
-              <div className="flex-grow">
-                <Text type="secondary" className="block mb-4">
-                  Manage users in your organization. Add new users, update their information, or
-                  remove existing users.
-                </Text>
-                <div className="flex flex-col space-y-2">
-                  <Text strong className="block">
-                    Users
-                  </Text>
-                  <Text type="secondary">View and manage organization members</Text>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <Link href="/administrations/users">
-                  <Button type="primary" icon={<TeamOutlined />} block>
-                    Manage Users
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {adminCards
+          .filter((card) => permissions[card.permission[0]])
+          .map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.href} className="rounded-lg">
+                <CardHeader>
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                    <Icon className="size-5" />
+                  </div>
+                  <CardTitle>{card.title}</CardTitle>
+                  <CardDescription>{card.description}</CardDescription>
+                </CardHeader>
+                <CardFooter>
+                  <Button render={<Link href={card.href} />} variant="outline" className="w-full">
+                    Open
+                    <ArrowRightIcon data-icon="inline-end" />
                   </Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Organizations Management Card */}
-        {canViewOrganizations && (
-          <Card style={CARD_STYLES} styles={{ body: CARD_BODY_STYLES }}>
-            <div className="flex flex-col h-full">
-              <Title level={4} className="flex items-center !mb-4">
-                <ApartmentOutlined className="mr-2" /> Organizations Management
-              </Title>
-              <div className="flex-grow">
-                <Text type="secondary" className="block mb-4">
-                  Manage organizations and their structures. Create new organizations, update their
-                  information, and manage organization hierarchies.
-                </Text>
-                <div className="flex flex-col space-y-2">
-                  <Text strong className="block">
-                    Organizations
-                  </Text>
-                  <Text type="secondary">
-                    {isAdmin
-                      ? 'Create and manage organizations across the system'
-                      : 'View and manage your organizations'}
-                  </Text>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <Link href="/administrations/organizations">
-                  <Button type="primary" icon={<ApartmentOutlined />} block>
-                    Manage Organizations
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Roles Management Card */}
-        {canViewRoles && (
-          <Card style={CARD_STYLES} styles={{ body: CARD_BODY_STYLES }}>
-            <div className="flex flex-col h-full">
-              <Title level={4} className="flex items-center !mb-4">
-                <SafetyCertificateOutlined className="mr-2" /> Roles Management
-              </Title>
-              <div className="flex-grow">
-                <Text type="secondary" className="block mb-4">
-                  Manage roles and permissions. Create new roles, assign permissions, and manage
-                  role assignments.
-                </Text>
-                <div className="flex flex-col space-y-2">
-                  <Text strong className="block">
-                    Roles
-                  </Text>
-                  <Text type="secondary">
-                    {isAdmin
-                      ? 'Create and manage roles across all organizations'
-                      : 'View and manage roles in your organizations'}
-                  </Text>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <Link href="/administrations/roles">
-                  <Button type="primary" icon={<SafetyCertificateOutlined />} block>
-                    Manage Roles
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Security Logs Card */}
-        {canViewSecurityLogs && (
-          <Card style={CARD_STYLES} styles={{ body: CARD_BODY_STYLES }}>
-            <div className="flex flex-col h-full">
-              <Title level={4} className="flex items-center !mb-4">
-                <SafetyCertificateOutlined className="mr-2" /> Security Logs
-              </Title>
-              <div className="flex-grow">
-                <Text type="secondary" className="block mb-4">
-                  Monitor and track all authentication attempts and security-related events in the
-                  system.
-                </Text>
-                <div className="flex flex-col space-y-2">
-                  <Text strong className="block">
-                    Authentication Logs
-                  </Text>
-                  <Text type="secondary">
-                    View successful and failed login attempts, IP addresses, and user agents
-                  </Text>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <Link href="/administrations/security-logs">
-                  <Button type="primary" icon={<SafetyCertificateOutlined />} block>
-                    View Security Logs
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Permissions Management Card */}
-        {canViewPermissions && (
-          <Card style={CARD_STYLES} styles={{ body: CARD_BODY_STYLES }}>
-            <div className="flex flex-col h-full">
-              <Title level={4} className="flex items-center !mb-4">
-                <LockOutlined className="mr-2" /> Permissions Management
-              </Title>
-              <div className="flex-grow">
-                <Text type="secondary" className="block mb-4">
-                  Manage permissions and access control. Create new permissions, update existing
-                  ones, and manage resource access.
-                </Text>
-                <div className="flex flex-col space-y-2">
-                  <Text strong className="block">
-                    Permissions
-                  </Text>
-                  <Text type="secondary">
-                    {isAdmin
-                      ? 'Create and manage permissions across all resources'
-                      : 'View and manage resource permissions'}
-                  </Text>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <Link href="/administrations/permissions">
-                  <Button type="primary" icon={<LockOutlined />} block>
-                    Manage Permissions
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
-        )}
-      </div>
-    </div>
+                </CardFooter>
+              </Card>
+            );
+          })}
+      </section>
+    </>
   );
 }

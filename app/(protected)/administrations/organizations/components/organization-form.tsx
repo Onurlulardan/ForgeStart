@@ -1,101 +1,150 @@
 'use client';
 
-import { Form, Input, Select, Button } from 'antd';
+import { FormEvent, useEffect, useState } from 'react';
 import { Organization, OrgStatus } from '@/db/types';
-import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getRequest } from '@/lib/apiClient';
+
+export interface OrganizationFormData {
+  name: string;
+  slug: string;
+  status: OrgStatus;
+  parentId: string | null;
+}
 
 interface OrganizationFormProps {
   initialValues?: Organization;
-  onSubmit: (values: any) => void;
+  onSubmit: (values: OrganizationFormData) => Promise<void> | void;
   loading?: boolean;
 }
 
+const emptyForm: OrganizationFormData = {
+  name: '',
+  slug: '',
+  status: OrgStatus.ACTIVE,
+  parentId: null,
+};
+
 export function OrganizationForm({ initialValues, onSubmit, loading }: OrganizationFormProps) {
-  const [form] = Form.useForm();
+  const [values, setValues] = useState<OrganizationFormData>(emptyForm);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
 
   useEffect(() => {
+    const fetchAvailableParents = async () => {
+      try {
+        const url = initialValues
+          ? `/administrations/organizations/available-parents?organizationId=${initialValues.id}`
+          : '/administrations/organizations/available-parents';
+
+        const data = await getRequest<Organization[]>(url);
+        setOrganizations(data);
+      } catch (error) {
+        console.error('Failed to fetch available parents:', error);
+      }
+    };
+
     fetchAvailableParents();
   }, [initialValues]);
 
-  const fetchAvailableParents = async () => {
-    try {
-      const url = initialValues
-        ? `/administrations/organizations/available-parents?organizationId=${initialValues.id}`
-        : '/administrations/organizations/available-parents';
-
-      const data = await getRequest<Organization[]>(url);
-      setOrganizations(data);
-    } catch (error) {
-      console.error('Failed to fetch available parents:', error);
-    }
-  };
-
   useEffect(() => {
-    if (initialValues) {
-      form.setFieldsValue(initialValues);
-    }
-  }, [initialValues, form]);
+    setValues({
+      name: initialValues?.name ?? '',
+      slug: initialValues?.slug ?? '',
+      status: initialValues?.status ?? OrgStatus.ACTIVE,
+      parentId: initialValues?.parentId ?? null,
+    });
+  }, [initialValues]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     await onSubmit(values);
-    form.resetFields();
   };
 
   return (
-    <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={initialValues}>
-      <Form.Item
-        name="name"
-        label="Name"
-        rules={[{ required: true, message: 'Please enter organization name' }]}
-      >
-        <Input placeholder="Enter organization name" />
-      </Form.Item>
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="organizationName">Name</FieldLabel>
+          <Input
+            id="organizationName"
+            value={values.name}
+            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
+            required
+          />
+        </Field>
 
-      <Form.Item
-        name="slug"
-        label="Slug"
-        rules={[
-          { required: true, message: 'Please enter organization slug' },
-          {
-            pattern: /^[a-z0-9-]+$/,
-            message: 'Slug can only contain lowercase letters, numbers, and hyphens',
-          },
-        ]}
-      >
-        <Input placeholder="Enter organization slug" />
-      </Form.Item>
+        <Field>
+          <FieldLabel htmlFor="organizationSlug">Slug</FieldLabel>
+          <Input
+            id="organizationSlug"
+            pattern="^[a-z0-9-]+$"
+            value={values.slug}
+            onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))}
+            required
+          />
+        </Field>
 
-      <Form.Item
-        name="status"
-        label="Status"
-        rules={[{ required: true, message: 'Please select organization status' }]}
-      >
-        <Select>
-          {Object.values(OrgStatus).map((status) => (
-            <Select.Option key={status} value={status}>
-              {status}
-            </Select.Option>
-          ))}
-        </Select>
-      </Form.Item>
+        <Field>
+          <FieldLabel>Status</FieldLabel>
+          <Select
+            value={values.status}
+            onValueChange={(status) =>
+              setValues((current) => ({ ...current, status: status as OrgStatus }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {Object.values(OrgStatus).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
 
-      <Form.Item name="parentId" label="Parent Organization">
-        <Select allowClear placeholder="Select parent organization" loading={!organizations.length}>
-          {organizations.map((org) => (
-            <Select.Option key={org.id} value={org.id}>
-              {org.name}
-            </Select.Option>
-          ))}
-        </Select>
-      </Form.Item>
+        <Field>
+          <FieldLabel>Parent organization</FieldLabel>
+          <Select
+            value={values.parentId ?? 'root'}
+            onValueChange={(value) =>
+              setValues((current) => ({ ...current, parentId: value === 'root' ? null : value }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select parent organization" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="root">No parent</SelectItem>
+                {organizations.map((organization) => (
+                  <SelectItem key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
 
-      <Form.Item>
-        <Button type="primary" htmlType="submit" loading={loading} block>
-          {initialValues ? 'Update Organization' : 'Create Organization'}
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Saving...' : initialValues ? 'Update organization' : 'Create organization'}
         </Button>
-      </Form.Item>
-    </Form>
+      </FieldGroup>
+    </form>
   );
 }

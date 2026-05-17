@@ -5,8 +5,10 @@ import { DataGrid } from './index';
 
 describe('DataGrid', () => {
   it('renders header content and row data', () => {
+    const TypedDataGrid = DataGrid<{ id: string; email: string }>;
+
     render(
-      React.createElement(DataGrid, {
+      React.createElement(TypedDataGrid, {
         rowKey: 'id',
         headerContent: React.createElement('h2', null, 'Users'),
         dataSource: [{ id: '1', email: 'admin@example.com' }],

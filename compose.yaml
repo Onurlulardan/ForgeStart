@@ -58,10 +58,11 @@ services:
     volumes:
       - .:/app
       - app-node-modules:/app/node_modules
+      - app-next-cache:/app/.next
     depends_on:
       seed:
         condition: service_completed_successfully
-    command: yarn dev --hostname 0.0.0.0
+    command: yarn dev --hostname 0.0.0.0 --port 3000
 
   app-prod:
     profiles: ['prod']
@@ -78,8 +79,10 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    command: yarn start --hostname 0.0.0.0 --port 3000
 
 volumes:
   postgres-data:
     name: ${POSTGRES_DATA_VOLUME:-nextstarter_postgres_data}
   app-node-modules:
+  app-next-cache:

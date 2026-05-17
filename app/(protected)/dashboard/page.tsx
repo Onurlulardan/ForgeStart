@@ -1,20 +1,42 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Typography, Button } from 'antd';
-import { useSession } from 'next-auth/react';
-import { usePermission } from '@/lib/auth/client-permissions';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRightOutlined } from '@ant-design/icons';
+import { ArrowRightIcon, Building2Icon, ShieldCheckIcon, UsersIcon } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/app/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
+import { usePermission } from '@/lib/auth/client-permissions';
 import { getRequest } from '@/lib/apiClient';
-
-const { Title, Text } = Typography;
 
 interface DashboardStats {
   totalOrganizations: number;
   totalUsers: number;
   activeUsers: number;
 }
+
+const statMeta = [
+  {
+    key: 'totalOrganizations',
+    label: 'Organizations',
+    description: 'Root and child workspaces',
+    icon: Building2Icon,
+  },
+  {
+    key: 'totalUsers',
+    label: 'Users',
+    description: 'Registered accounts',
+    icon: UsersIcon,
+  },
+  {
+    key: 'activeUsers',
+    label: 'Active users',
+    description: 'Enabled for sign in',
+    icon: ShieldCheckIcon,
+  },
+] as const;
 
 export default function Dashboard() {
   const { data: session } = useSession();
@@ -23,67 +45,86 @@ export default function Dashboard() {
     totalUsers: 0,
     activeUsers: 0,
   });
-
-  // Permission hooks
+  const [loading, setLoading] = useState(false);
   const canViewStats = usePermission('dashboard', 'view');
 
-  const fetchDashboardData = async () => {
-    if (canViewStats) {
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!canViewStats) return;
+      setLoading(true);
       try {
         const data = await getRequest<DashboardStats>('/dashboard/stats');
         setStats(data);
       } catch (error) {
         console.error('Failed to fetch dashboard stats:', error);
+      } finally {
+        setLoading(false);
       }
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchDashboardData();
   }, [canViewStats]);
 
+  const name = [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ');
+
   return (
-    <div className="flex items-center justify-center p-4 h-full">
-      <Card className="w-full text-center">
-        <Title level={2}>Welcome to NextJS Starter Template</Title>
-        <Text className="block mb-8 text-lg">A modern and scalable system for your business</Text>
+    <>
+      <PageHeader
+        title={`Welcome${name ? `, ${name}` : ''}`}
+        description="A starter workspace with local-first database, auth and admin workflows ready for development."
+        actions={
+          <Button render={<Link href="/administrations" />}>
+            Go to administration
+            <ArrowRightIcon data-icon="inline-end" />
+          </Button>
+        }
+      />
 
-        {session ? (
-          <div>
-            <Link href="/administrations">
-              <Button type="primary" size="large" icon={<ArrowRightOutlined />}>
-                Go to Administrations
-              </Button>
-            </Link>
+      <section className="grid gap-4 md:grid-cols-3">
+        {statMeta.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Card key={item.key} className="rounded-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardDescription>{item.label}</CardDescription>
+                    <CardTitle className="mt-2 text-3xl">
+                      {loading ? <Skeleton className="h-8 w-16" /> : stats[item.key]}
+                    </CardTitle>
+                  </div>
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                    <Icon className="size-5" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{item.description}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </section>
 
-            {canViewStats && (
-              <Row gutter={16} className="mb-8 mt-8">
-                <Col span={8}>
-                  <Card>
-                    <Statistic title="Total Organizations" value={stats.totalOrganizations} />
-                  </Card>
-                </Col>
-                <Col span={8}>
-                  <Card>
-                    <Statistic title="Total Users" value={stats.totalUsers} />
-                  </Card>
-                </Col>
-                <Col span={8}>
-                  <Card>
-                    <Statistic title="Active Users" value={stats.activeUsers} />
-                  </Card>
-                </Col>
-              </Row>
-            )}
-          </div>
-        ) : (
-          <Link href="/auth/signin">
-            <Button type="primary" size="large" icon={<ArrowRightOutlined />}>
-              Sign In
-            </Button>
-          </Link>
-        )}
+      <Card className="rounded-lg">
+        <CardHeader>
+          <CardTitle>Starter readiness</CardTitle>
+          <CardDescription>
+            What this V2 baseline gives a local developer immediately.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          {[
+            'Compose starts PostgreSQL and app together',
+            'Drizzle owns migration and seed flow',
+            'Permission checks return API-first JSON responses',
+          ].map((item) => (
+            <div key={item} className="rounded-lg border bg-background p-4 text-sm">
+              {item}
+            </div>
+          ))}
+        </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

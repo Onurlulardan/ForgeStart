@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Typography, Table } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from '@/components/app/page-header';
+import { StatusBadge } from '@/components/app/status-badge';
+import { DataGrid } from '@/core/components/datagrid';
 import { getRequest } from '@/lib/apiClient';
 import { usePermission } from '@/lib/auth/client-permissions';
-
-const { Title } = Typography;
 
 interface SecurityLog {
   id: string;
@@ -26,99 +26,85 @@ interface SecurityLog {
 export default function SecurityLogsPage() {
   const [logs, setLogs] = useState<SecurityLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const canViewLogs = usePermission('security_log', 'view');
+  const canViewLogs = usePermission('security-log', 'view');
 
   useEffect(() => {
-    if (canViewLogs) {
-      fetchLogs();
-    }
+    const fetchLogs = async () => {
+      if (!canViewLogs) return;
+      setLoading(true);
+      try {
+        const data = await getRequest<SecurityLog[]>('/administrations/security-logs');
+        setLogs(data);
+      } catch (error) {
+        console.error('Failed to fetch security logs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
   }, [canViewLogs]);
-
-  const fetchLogs = async () => {
-    try {
-      const data = await getRequest<SecurityLog[]>('/administrations/security-logs');
-      setLogs(data);
-    } catch (error) {
-      console.error('Failed to fetch security logs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const columns: ColumnsType<SecurityLog> = [
-    {
-      title: 'Date',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date: string) => new Date(date).toLocaleString(),
-      width: 180,
-    },
-    {
-      title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
-      width: 120,
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status: string) => (
-        <span style={{ color: status === 'SUCCESS' ? '#52c41a' : '#ff4d4f' }}>{status}</span>
-      ),
-    },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-      width: 200,
-    },
-    {
-      title: 'User',
-      key: 'user',
-      width: 150,
-      render: (record: SecurityLog) =>
-        record.user ? `${record.user.firstName} ${record.user.lastName}` : '-',
-    },
-    {
-      title: 'IP Address',
-      dataIndex: 'ipAddress',
-      key: 'ipAddress',
-      width: 130,
-    },
-    {
-      title: 'Browser',
-      dataIndex: 'userAgent',
-      key: 'userAgent',
-      ellipsis: true,
-    },
-    {
-      title: 'Message',
-      dataIndex: 'message',
-      key: 'message',
-      ellipsis: true,
-    },
-  ];
 
   if (!canViewLogs) {
     return null;
   }
 
+  const columns = [
+    {
+      title: 'Date',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date: string) => new Date(date).toLocaleString(),
+    },
+    { title: 'Type', dataIndex: 'type', key: 'type' },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => <StatusBadge status={status} />,
+    },
+    {
+      title: 'Identity',
+      key: 'identity',
+      render: (record: SecurityLog) => (
+        <div>
+          <div className="font-medium">{record.email || '-'}</div>
+          <div className="text-xs text-muted-foreground">
+            {record.user ? `${record.user.firstName} ${record.user.lastName}` : 'No linked user'}
+          </div>
+        </div>
+      ),
+    },
+    { title: 'IP address', dataIndex: 'ipAddress', key: 'ipAddress' },
+    {
+      title: 'Message',
+      key: 'message',
+      render: (record: SecurityLog) => (
+        <div className="max-w-sm">
+          <div className="truncate">{record.message}</div>
+          <div className="truncate text-xs text-muted-foreground">{record.userAgent}</div>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <Card>
-      <Title level={2}>Security Logs</Title>
-      <Table
-        columns={columns}
-        dataSource={logs}
-        loading={loading}
-        rowKey="id"
-        pagination={{
-          defaultPageSize: 20,
-          showSizeChanger: true,
-          showTotal: (total) => `Total ${total} records`,
-        }}
+    <>
+      <PageHeader
+        title="Security logs"
+        description="Review authentication attempts, status, IP address and browser context."
       />
-    </Card>
+      <Card className="rounded-lg">
+        <CardContent className="p-4">
+          <DataGrid<SecurityLog>
+            columns={columns}
+            dataSource={logs}
+            loading={loading}
+            rowKey="id"
+            pageSize={20}
+          />
+        </CardContent>
+      </Card>
+    </>
   );
 }
