@@ -16,12 +16,12 @@ services:
       retries: 10
 
   migrate:
-    profiles: ['dev', 'prod']
+    profiles: ['dev', 'prod', 'seed']
     build:
       context: .
       target: dev
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
     depends_on:
       postgres:
         condition: service_healthy
@@ -33,7 +33,7 @@ services:
       context: .
       target: dev
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
       SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME:-Super}
       SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME:-Admin}
@@ -51,7 +51,7 @@ services:
     environment:
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
-      DATABASE_URL: ${DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     ports:
       - '${APP_PORT:-3000}:3000'
@@ -71,7 +71,7 @@ services:
     environment:
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
-      DATABASE_URL: ${DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     ports:
       - '${APP_PORT:-3000}:3000'

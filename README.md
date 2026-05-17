@@ -40,12 +40,17 @@ Required values:
 AUTH_URL=http://localhost:3000
 AUTH_SECRET=replace-with-a-random-secret-at-least-32-characters
 DATABASE_URL=postgres://nextstarter:nextstarter@localhost:5432/nextstarter
+DOCKER_DATABASE_URL=postgres://nextstarter:nextstarter@postgres:5432/nextstarter
 SUPER_ADMIN_EMAIL=superadmin@example.com
 SUPER_ADMIN_PASSWORD=change-this-password
 ```
 
 Production deployments must set a strong `AUTH_SECRET` and a non-default
 `SUPER_ADMIN_PASSWORD`.
+
+`DATABASE_URL` is for commands running on the host machine. Docker services use
+`DOCKER_DATABASE_URL`, where the database host must be the Compose service name
+`postgres`, not `localhost`.
 
 ## Commands
 
