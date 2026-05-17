@@ -48,6 +48,7 @@ export default function ProfileEditPage() {
   const t = useTranslations('admin.profile');
   const tAuth = useTranslations('auth');
   const tCommon = useTranslations('common');
+  const tFeedback = useTranslations('feedback');
   const router = useRouter();
   const { data: session, update: updateSession } = useSession();
   const user = session?.user;
@@ -79,7 +80,7 @@ export default function ProfileEditPage() {
         phone: values.phone ?? user.phone,
       },
     });
-    toast.success(tCommon('save'));
+    toast.success(tFeedback('profileUpdated'));
     router.refresh();
   };
 
@@ -92,7 +93,7 @@ export default function ProfileEditPage() {
       toast.error(result.error);
       return;
     }
-    toast.success(tCommon('update'));
+    toast.success(tFeedback('passwordUpdated'));
     router.refresh();
   };
 

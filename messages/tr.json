@@ -274,7 +274,93 @@
       "title": "Sistem Ayarları",
       "description": "Uygulama yapılandırmasını yönetin.",
       "saveButton": "Ayarları kaydet",
-      "saved": "Ayarlar güncellendi"
+      "saved": "Ayarlar güncellendi",
+      "settingsDescription": "Klonladıktan sonra sıkça değiştirilen proje varsayılanları.",
+      "runtimeDescription": "Canlı uygulama ve veritabanı meta verisi.",
+      "tabs": {
+        "doctor": "Doktor",
+        "settings": "Ayarlar",
+        "runtime": "Çalışma Zamanı"
+      },
+      "cards": {
+        "application": "Uygulama",
+        "database": "Veritabanı",
+        "migrations": "Migrasyonlar",
+        "connected": "Bağlı",
+        "unavailable": "Erişilemiyor",
+        "noServerTime": "Sunucu zamanı yok",
+        "migrationsApplied": "{count, plural, =0 {Migrasyon uygulanmadı} other {# migrasyon uygulandı}}",
+        "drizzleTableExists": "Drizzle tablosu mevcut",
+        "noMigrationTable": "Migrasyon tablosu yok"
+      },
+      "doctor": {
+        "title": "Kurulum Doktoru",
+        "description": "Yerel proje ön koşulları ve ortam hazırlığı.",
+        "statusOk": "Tamam",
+        "statusMissing": "Eksik",
+        "statusOptional": "Opsiyonel",
+        "groups": {
+          "core": "Çekirdek",
+          "app": "Uygulama",
+          "storage": "Depolama",
+          "email": "E-posta",
+          "rate-limit": "Hız Sınırı",
+          "realtime": "Gerçek Zamanlı",
+          "environment": "Ortam"
+        }
+      },
+      "runtime": {
+        "node": "Node",
+        "commit": "Commit",
+        "checkedAt": "Kontrol zamanı",
+        "latestMigration": "En son migrasyon",
+        "local": "yerel",
+        "none": "yok"
+      },
+      "settingsLabels": {
+        "app": {
+          "name": {
+            "label": "Uygulama adı",
+            "description": "Starter konsolunda gösterilen ürün adı"
+          },
+          "logo_url": {
+            "label": "Logo URL",
+            "description": "İsteğe bağlı barındırılan logo URL"
+          },
+          "default_locale": {
+            "label": "Varsayılan dil",
+            "description": "Çoklu dil desteği için varsayılan locale"
+          }
+        },
+        "auth": {
+          "session_max_age_days": {
+            "label": "Oturum süresi",
+            "description": "Gün cinsinden varsayılan oturum ömrü"
+          }
+        },
+        "email": {
+          "provider": {
+            "label": "E-posta sağlayıcısı",
+            "description": "Aktif e-posta gönderim sağlayıcısı (console / resend / smtp)"
+          }
+        },
+        "system": {
+          "welcomeMessage": {
+            "label": "Karşılama mesajı",
+            "description": "Yeni kullanıcılara gösterilen zengin metin mesajı (Tiptap ile render edilir)."
+          },
+          "legal": {
+            "privacy": {
+              "label": "Gizlilik politikası",
+              "description": "Gizlilik politikası metni"
+            },
+            "terms": {
+              "label": "Kullanım şartları",
+              "description": "Kullanım şartları metni"
+            }
+          }
+        }
+      }
     },
     "profile": {
       "title": "Profilim",
@@ -286,7 +372,21 @@
     },
     "theme": {
       "title": "Tema Özelleştirici",
-      "description": "Marka token'larını canlı düzenleyin, kullanıcılarınız için sistem varsayılanı olarak kaydedin."
+      "description": "Marka token'larını canlı düzenleyin, kullanıcılarınız için sistem varsayılanı olarak kaydedin.",
+      "presets": "Hazır temalar",
+      "presetsHint": "Hızlı başlangıç paletleri",
+      "tabs": {
+        "light": "Açık",
+        "dark": "Koyu",
+        "typography": "Tipografi"
+      },
+      "actions": {
+        "saveSystem": "Sistem varsayılanı olarak kaydet",
+        "resetSystem": "Sistem varsayılanını sıfırla",
+        "exportJson": "JSON dışa aktar",
+        "importJson": "JSON içe aktar",
+        "resetLocal": "Yerel sıfırla"
+      }
     }
   },
   "uploads": {
@@ -356,7 +456,15 @@
     "createSuccess": "Başarıyla oluşturuldu",
     "updateSuccess": "Başarıyla güncellendi",
     "deleteSuccess": "Başarıyla silindi",
-    "operationSuccess": "İşlem başarıyla tamamlandı"
+    "operationSuccess": "İşlem başarıyla tamamlandı",
+    "themeSaved": "Sistem varsayılanı olarak kaydedildi",
+    "themeReset": "Sistem varsayılanı sıfırlandı",
+    "profileUpdated": "Profil güncellendi",
+    "passwordUpdated": "Şifre güncellendi",
+    "avatarUpdated": "Avatar güncellendi",
+    "themeImportFailed": "İçe aktarma başarısız",
+    "rateLimited": "Çok fazla istek",
+    "rateLimitedRetry": "Çok fazla istek. {seconds} saniye sonra tekrar deneyin."
   },
   "emptyState": {
     "title": "Henüz veri yok",

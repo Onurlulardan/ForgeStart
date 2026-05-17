@@ -33,7 +33,8 @@ function downloadJson(json: string) {
 }
 
 export function ThemeCustomizerPanel() {
-  const tCommon = useTranslations('common');
+  const tTheme = useTranslations('admin.theme');
+  const tFeedback = useTranslations('feedback');
   const { tokens, mode, setColorToken, reset, exportJson, importJson } = useThemeCustomizer();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [savingSystem, startSavingSystem] = useTransition();
@@ -51,7 +52,7 @@ export function ThemeCustomizerPanel() {
       importJson(text);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed');
+      setError(err instanceof Error ? err.message : tFeedback('themeImportFailed'));
     }
   };
 
@@ -59,7 +60,7 @@ export function ThemeCustomizerPanel() {
     startSavingSystem(async () => {
       const result = await saveSystemThemeAction(tokens);
       if (result.ok) {
-        toast.success('Saved as system default');
+        toast.success(tFeedback('themeSaved'));
       } else {
         toast.error(result.error);
       }
@@ -70,7 +71,7 @@ export function ThemeCustomizerPanel() {
     startResettingSystem(async () => {
       const result = await resetSystemThemeAction();
       if (result.ok) {
-        toast.success('System default reset');
+        toast.success(tFeedback('themeReset'));
       } else {
         toast.error(result.error);
       }
@@ -82,17 +83,17 @@ export function ThemeCustomizerPanel() {
       <div className="space-y-6">
         <section className="space-y-3 rounded-lg border p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Presets</h3>
-            <span className="text-xs text-muted-foreground">Quick start palettes</span>
+            <h3 className="text-sm font-semibold">{tTheme('presets')}</h3>
+            <span className="text-xs text-muted-foreground">{tTheme('presetsHint')}</span>
           </div>
           <PresetSelector />
         </section>
 
         <Tabs defaultValue={mode}>
           <TabsList>
-            <TabsTrigger value="light">Light</TabsTrigger>
-            <TabsTrigger value="dark">Dark</TabsTrigger>
-            <TabsTrigger value="typography">Typography</TabsTrigger>
+            <TabsTrigger value="light">{tTheme('tabs.light')}</TabsTrigger>
+            <TabsTrigger value="dark">{tTheme('tabs.dark')}</TabsTrigger>
+            <TabsTrigger value="typography">{tTheme('tabs.typography')}</TabsTrigger>
           </TabsList>
           <TabsContent value="light" className="mt-4 space-y-6">
             {TOKEN_GROUPS.map((group) => (
@@ -137,17 +138,17 @@ export function ThemeCustomizerPanel() {
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleSaveSystem} disabled={savingSystem}>
             {savingSystem ? <Loader2Icon className="animate-spin" /> : <ServerCogIcon />}
-            Save as system default
+            {tTheme('actions.saveSystem')}
           </Button>
           <Button variant="outline" onClick={handleResetSystem} disabled={resettingSystem}>
             {resettingSystem ? <Loader2Icon className="animate-spin" /> : <RotateCcwIcon />}
-            Reset system default
+            {tTheme('actions.resetSystem')}
           </Button>
           <Button variant="outline" onClick={() => downloadJson(exportJson())}>
-            <DownloadIcon /> Export JSON
+            <DownloadIcon /> {tTheme('actions.exportJson')}
           </Button>
           <Button variant="outline" onClick={handleImportClick}>
-            <UploadIcon /> Import JSON
+            <UploadIcon /> {tTheme('actions.importJson')}
           </Button>
           <input
             ref={fileInputRef}
@@ -157,7 +158,7 @@ export function ThemeCustomizerPanel() {
             onChange={handleImport}
           />
           <Button variant="destructive" onClick={reset}>
-            <SaveIcon /> {tCommon('cancel')}
+            <SaveIcon /> {tTheme('actions.resetLocal')}
           </Button>
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}

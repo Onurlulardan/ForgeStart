@@ -274,7 +274,93 @@
       "title": "System Settings",
       "description": "Manage application configuration.",
       "saveButton": "Save settings",
-      "saved": "Settings updated"
+      "saved": "Settings updated",
+      "settingsDescription": "Project defaults that commonly change after cloning.",
+      "runtimeDescription": "Live app and database metadata.",
+      "tabs": {
+        "doctor": "Doctor",
+        "settings": "Settings",
+        "runtime": "Runtime"
+      },
+      "cards": {
+        "application": "Application",
+        "database": "Database",
+        "migrations": "Migrations",
+        "connected": "Connected",
+        "unavailable": "Unavailable",
+        "noServerTime": "No server time",
+        "migrationsApplied": "{count, plural, =0 {No migrations applied} =1 {# migration applied} other {# migrations applied}}",
+        "drizzleTableExists": "Drizzle table exists",
+        "noMigrationTable": "No migration table"
+      },
+      "doctor": {
+        "title": "Setup doctor",
+        "description": "Local project prerequisites and environment readiness.",
+        "statusOk": "OK",
+        "statusMissing": "Missing",
+        "statusOptional": "Optional",
+        "groups": {
+          "core": "Core",
+          "app": "Application",
+          "storage": "Storage",
+          "email": "Email",
+          "rate-limit": "Rate limit",
+          "realtime": "Realtime",
+          "environment": "Environment"
+        }
+      },
+      "runtime": {
+        "node": "Node",
+        "commit": "Commit",
+        "checkedAt": "Checked at",
+        "latestMigration": "Latest migration",
+        "local": "local",
+        "none": "none"
+      },
+      "settingsLabels": {
+        "app": {
+          "name": {
+            "label": "Application name",
+            "description": "Displayed product name for the starter console"
+          },
+          "logo_url": {
+            "label": "Logo URL",
+            "description": "Optional hosted logo URL"
+          },
+          "default_locale": {
+            "label": "Default locale",
+            "description": "Default locale for internationalization"
+          }
+        },
+        "auth": {
+          "session_max_age_days": {
+            "label": "Session max age",
+            "description": "Default session lifetime in days"
+          }
+        },
+        "email": {
+          "provider": {
+            "label": "Email provider",
+            "description": "Active email delivery provider (console / resend / smtp)"
+          }
+        },
+        "system": {
+          "welcomeMessage": {
+            "label": "Welcome message",
+            "description": "Rich text message shown to new users (rendered via Tiptap)."
+          },
+          "legal": {
+            "privacy": {
+              "label": "Privacy policy",
+              "description": "Privacy policy text"
+            },
+            "terms": {
+              "label": "Terms of service",
+              "description": "Terms of service text"
+            }
+          }
+        }
+      }
     },
     "profile": {
       "title": "My profile",
@@ -286,7 +372,21 @@
     },
     "theme": {
       "title": "Theme customizer",
-      "description": "Edit brand tokens live and save as the system default for everyone."
+      "description": "Edit brand tokens live and save as the system default for everyone.",
+      "presets": "Presets",
+      "presetsHint": "Quick start palettes",
+      "tabs": {
+        "light": "Light",
+        "dark": "Dark",
+        "typography": "Typography"
+      },
+      "actions": {
+        "saveSystem": "Save as system default",
+        "resetSystem": "Reset system default",
+        "exportJson": "Export JSON",
+        "importJson": "Import JSON",
+        "resetLocal": "Reset local"
+      }
     }
   },
   "uploads": {
@@ -356,7 +456,15 @@
     "createSuccess": "Created successfully",
     "updateSuccess": "Updated successfully",
     "deleteSuccess": "Deleted successfully",
-    "operationSuccess": "Operation completed successfully"
+    "operationSuccess": "Operation completed successfully",
+    "themeSaved": "Saved as system default",
+    "themeReset": "System default reset",
+    "profileUpdated": "Profile updated",
+    "passwordUpdated": "Password updated",
+    "avatarUpdated": "Avatar updated",
+    "themeImportFailed": "Import failed",
+    "rateLimited": "Rate limited",
+    "rateLimitedRetry": "Too many requests. Retry in {seconds}s."
   },
   "emptyState": {
     "title": "No data yet",

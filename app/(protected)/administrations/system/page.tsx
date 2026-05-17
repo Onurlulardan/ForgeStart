@@ -9,6 +9,7 @@ import {
   ServerCogIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -39,7 +40,11 @@ const FormRichText = dynamic(
   }
 );
 
-const RICH_TEXT_KEYS = new Set(['system.welcomeMessage', 'system.legal.privacy', 'system.legal.terms']);
+const RICH_TEXT_KEYS = new Set([
+  'system.welcomeMessage',
+  'system.legal.privacy',
+  'system.legal.terms',
+]);
 const MULTILINE_HINTS = ['description', 'message', 'body', 'content'];
 
 interface HealthStatus {
@@ -63,9 +68,18 @@ interface HealthStatus {
   };
 }
 
+type DoctorGroup = 'core' | 'app' | 'storage' | 'email' | 'rate-limit' | 'realtime';
+
+interface DoctorCheck {
+  name: string;
+  ok: boolean;
+  required: boolean;
+  group: DoctorGroup;
+}
+
 interface DoctorStatus {
   ok: boolean;
-  checks: { name: string; ok: boolean }[];
+  checks: DoctorCheck[];
   environment: Record<string, string | null>;
 }
 
@@ -81,7 +95,26 @@ function isMultilineKey(key: string): boolean {
 
 function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
   const t = useTranslations('admin.system');
+  const tLabels = useTranslations('admin.system.settingsLabels');
   const mutation = useAppSettingsMutation();
+
+  const labelFor = (setting: AppSettingItem): string => {
+    const key = `${setting.key}.label` as never;
+    try {
+      return tLabels(key);
+    } catch {
+      return setting.label;
+    }
+  };
+
+  const descriptionFor = (setting: AppSettingItem): string | undefined => {
+    const key = `${setting.key}.description` as never;
+    try {
+      return tLabels(key);
+    } catch {
+      return setting.description ?? undefined;
+    }
+  };
 
   const defaultValues: SettingsFormValues = {
     values: Object.fromEntries(settings.map((setting) => [setting.key, setting.value])),
@@ -103,15 +136,17 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
     >
       {settings.map((setting) => {
         const fieldName = `values.${setting.key}` as never;
+        const label = labelFor(setting);
+        const description = descriptionFor(setting);
 
         if (RICH_TEXT_KEYS.has(setting.key)) {
           return (
             <FormRichText
               key={setting.key}
               name={fieldName}
-              label={setting.label}
-              description={setting.description ?? undefined}
-              placeholder={setting.description ?? setting.key}
+              label={label}
+              description={description}
+              placeholder={description ?? setting.key}
             />
           );
         }
@@ -120,8 +155,8 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
           <FormField<SettingsFormValues>
             key={setting.key}
             name={fieldName}
-            label={setting.label}
-            description={setting.description ?? undefined}
+            label={label}
+            description={description}
           >
             {(field) => {
               const value = (field.value as string | undefined) ?? '';
@@ -133,7 +168,7 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
                     value={value}
                     onChange={(event) => field.onChange(event.target.value)}
                     onBlur={field.onBlur}
-                    placeholder={setting.description ?? setting.key}
+                    placeholder={description ?? setting.key}
                   />
                 );
               }
@@ -144,7 +179,7 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
                   onChange={(event) => field.onChange(event.target.value)}
                   onBlur={field.onBlur}
                   type={setting.isSecret ? 'password' : 'text'}
-                  placeholder={setting.description ?? setting.key}
+                  placeholder={description ?? setting.key}
                 />
               );
             }}
@@ -158,6 +193,91 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
         </SubmitButton>
       </div>
     </Form>
+  );
+}
+
+function DoctorPanel({ doctor }: { doctor: DoctorStatus | undefined }) {
+  const t = useTranslations('admin.system.doctor');
+  const tCommon = useTranslations('common');
+
+  const grouped = useMemo(() => {
+    const out: Record<DoctorGroup, DoctorCheck[]> = {
+      core: [],
+      app: [],
+      storage: [],
+      email: [],
+      'rate-limit': [],
+      realtime: [],
+    };
+    (doctor?.checks ?? []).forEach((check) => {
+      out[check.group].push(check);
+    });
+    return out;
+  }, [doctor]);
+
+  const groupOrder: DoctorGroup[] = ['core', 'app', 'storage', 'email', 'rate-limit', 'realtime'];
+
+  return (
+    <Card className="rounded-lg">
+      <CardHeader>
+        <CardTitle>{t('title')}</CardTitle>
+        <CardDescription>{t('description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {groupOrder.map((group) =>
+          grouped[group].length > 0 ? (
+            <div key={group} className="space-y-2">
+              <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {t(`groups.${group}`)}
+              </h4>
+              <div className="grid gap-2 lg:grid-cols-2">
+                {grouped[group].map((check) => (
+                  <div
+                    key={check.name}
+                    className="flex items-center justify-between rounded-lg border bg-background p-3"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{check.name}</span>
+                      {!check.required && (
+                        <span className="text-xs text-muted-foreground">{tCommon('settings')}</span>
+                      )}
+                    </div>
+                    <Badge
+                      variant={
+                        check.ok ? 'secondary' : check.required ? 'destructive' : 'outline'
+                      }
+                    >
+                      {check.ok ? t('statusOk') : check.required ? t('statusMissing') : t('statusOptional')}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null
+        )}
+
+        {doctor && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              {t('groups.environment')}
+            </h4>
+            <div className="grid gap-2 lg:grid-cols-2">
+              {Object.entries(doctor.environment).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between rounded-lg border bg-background p-3"
+                >
+                  <span className="text-sm font-medium">{key}</span>
+                  <span className="ml-4 max-w-64 truncate text-sm text-muted-foreground">
+                    {value ?? '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -192,23 +312,23 @@ export default function SystemPage() {
       <section className="grid gap-4 md:grid-cols-3">
         {[
           {
-            label: tCommon('settings'),
+            label: t('cards.application'),
             value: health ? `${health.app.name} ${health.app.version}` : null,
             detail: health?.app.environment,
             icon: ServerCogIcon,
           },
           {
-            label: 'Database',
-            value: health?.database.connected ? 'Connected' : 'Unavailable',
-            detail: health?.database.serverTime ?? 'No server time',
+            label: t('cards.database'),
+            value: health?.database.connected ? t('cards.connected') : t('cards.unavailable'),
+            detail: health?.database.serverTime ?? t('cards.noServerTime'),
             icon: DatabaseIcon,
           },
           {
-            label: 'Migrations',
-            value: health ? `${health.database.migrations.appliedCount} applied` : null,
+            label: t('cards.migrations'),
+            value: health ? t('cards.migrationsApplied', { count: health.database.migrations.appliedCount }) : null,
             detail: health?.database.migrations.tableExists
-              ? 'Drizzle table exists'
-              : 'No migration table',
+              ? t('cards.drizzleTableExists')
+              : t('cards.noMigrationTable'),
             icon: ActivityIcon,
           },
         ].map((item) => {
@@ -238,54 +358,20 @@ export default function SystemPage() {
 
       <Tabs defaultValue="doctor">
         <TabsList>
-          <TabsTrigger value="doctor">Doctor</TabsTrigger>
-          <TabsTrigger value="settings">{tCommon('settings')}</TabsTrigger>
-          <TabsTrigger value="runtime">Runtime</TabsTrigger>
+          <TabsTrigger value="doctor">{t('tabs.doctor')}</TabsTrigger>
+          <TabsTrigger value="settings">{t('tabs.settings')}</TabsTrigger>
+          <TabsTrigger value="runtime">{t('tabs.runtime')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="doctor" className="mt-4">
-          <Card className="rounded-lg">
-            <CardHeader>
-              <CardTitle>Setup doctor</CardTitle>
-              <CardDescription>
-                Local project prerequisites and environment readiness.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 lg:grid-cols-2">
-              {(doctor?.checks ?? []).map((file) => (
-                <div
-                  key={file.name}
-                  className="flex items-center justify-between rounded-lg border bg-background p-3"
-                >
-                  <span className="text-sm font-medium">{file.name}</span>
-                  <Badge variant={file.ok ? 'secondary' : 'destructive'}>
-                    {file.ok ? 'OK' : 'Missing'}
-                  </Badge>
-                </div>
-              ))}
-              {doctor &&
-                Object.entries(doctor.environment).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="flex items-center justify-between rounded-lg border bg-background p-3"
-                  >
-                    <span className="text-sm font-medium">{key}</span>
-                    <span className="max-w-64 truncate text-sm text-muted-foreground">
-                      {value ?? '—'}
-                    </span>
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
+          <DoctorPanel doctor={doctor} />
         </TabsContent>
 
         <TabsContent value="settings" className="mt-4">
           <Card className="rounded-lg">
             <CardHeader>
-              <CardTitle>{tCommon('settings')}</CardTitle>
-              <CardDescription>
-                Project defaults that commonly change after cloning.
-              </CardDescription>
+              <CardTitle>{t('tabs.settings')}</CardTitle>
+              <CardDescription>{t('settingsDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               {loadingSettings ? (
@@ -300,16 +386,19 @@ export default function SystemPage() {
         <TabsContent value="runtime" className="mt-4">
           <Card className="rounded-lg">
             <CardHeader>
-              <CardTitle>Runtime</CardTitle>
-              <CardDescription>Live app and database metadata.</CardDescription>
+              <CardTitle>{t('tabs.runtime')}</CardTitle>
+              <CardDescription>{t('runtimeDescription')}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
               {health &&
                 [
-                  ['Node', health.app.node],
-                  ['Commit', health.app.commit ?? 'local'],
-                  ['Checked at', health.checkedAt],
-                  ['Latest migration hash', health.database.migrations.latestMigration ?? 'none'],
+                  [t('runtime.node'), health.app.node],
+                  [t('runtime.commit'), health.app.commit ?? t('runtime.local')],
+                  [t('runtime.checkedAt'), health.checkedAt],
+                  [
+                    t('runtime.latestMigration'),
+                    health.database.migrations.latestMigration ?? t('runtime.none'),
+                  ],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-lg border bg-background p-3">
                     <div className="flex items-center gap-2 text-sm font-medium">
