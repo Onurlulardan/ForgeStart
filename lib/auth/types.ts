@@ -44,6 +44,7 @@ export type SessionUser = DefaultSession['user'] & {
   id: string;
   email: string;
   avatar: string | null;
+  avatarUploadId: string | null;
   firstName: string | null;
   lastName: string | null;
   phone: string | null;

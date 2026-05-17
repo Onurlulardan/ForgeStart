@@ -5,8 +5,9 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { uploads } from '@/db/schema';
 import type { Upload, UploadKind } from '@/db/types';
+import { UploadKind as UploadKindEnum } from '@/db/types';
 import { getStorage } from './index';
-import { getImageMetadata } from './image';
+import { generateThumbnail, getImageMetadata } from './image';
 import { isImage, validateUpload, type ValidationOptions } from './validators';
 
 export interface CreateUploadInput {
@@ -52,11 +53,30 @@ export async function createUpload(input: CreateUploadInput): Promise<Upload> {
 
   let width: number | null = null;
   let height: number | null = null;
+  let thumbnailPath: string | null = null;
   if (isImage(mime)) {
     const meta = await getImageMetadata(buffer);
     if (meta) {
       width = meta.width;
       height = meta.height;
+    }
+    if (
+      input.kind === UploadKindEnum.AVATAR ||
+      input.kind === UploadKindEnum.ORGANIZATION_LOGO ||
+      input.kind === UploadKindEnum.RICH_TEXT_IMAGE
+    ) {
+      try {
+        const thumb = await generateThumbnail(buffer);
+        const thumbKey = key.replace(/(\.[^./]+)?$/, '_thumb.webp');
+        const thumbResult = await storage.put({
+          buffer: thumb,
+          key: thumbKey,
+          contentType: 'image/webp',
+        });
+        thumbnailPath = thumbResult.key;
+      } catch (err) {
+        console.error('[storage.thumbnail]', err);
+      }
     }
   }
 
@@ -74,6 +94,7 @@ export async function createUpload(input: CreateUploadInput): Promise<Upload> {
       publicUrl: stored.url ?? null,
       width,
       height,
+      thumbnailPath,
       metadata: input.metadata ?? {},
     })
     .returning();

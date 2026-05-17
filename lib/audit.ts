@@ -2,6 +2,7 @@ import { db } from '@/db';
 import { auditLogs } from '@/db/schema';
 import { getClientInfo } from '@/lib/auth/session-data';
 import type { SessionUser } from '@/lib/auth/types';
+import { emitToRealtime } from '@/lib/realtime/emit-server';
 
 type AuditInput = {
   sessionUser?: SessionUser | null;
@@ -17,7 +18,7 @@ type AuditInput = {
 export async function writeAuditLog(input: AuditInput) {
   const { ipAddress, userAgent } = getClientInfo(input.request);
 
-  await db
+  const [inserted] = await db
     .insert(auditLogs)
     .values({
       actorId: input.sessionUser?.id ?? null,
@@ -31,5 +32,21 @@ export async function writeAuditLog(input: AuditInput) {
       ipAddress,
       userAgent,
     })
-    .catch(console.error);
+    .returning({ id: auditLogs.id })
+    .catch((err) => {
+      console.error('[writeAuditLog]', err);
+      return [];
+    });
+
+  if (inserted?.id) {
+    emitToRealtime({
+      event: 'audit-log:new',
+      payload: { id: inserted.id, action: input.action },
+    }).catch(() => undefined);
+
+    emitToRealtime({
+      event: 'resource:invalidate',
+      payload: { keys: ['audit-logs.list'] },
+    }).catch(() => undefined);
+  }
 }

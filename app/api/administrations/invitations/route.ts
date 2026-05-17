@@ -7,6 +7,8 @@ import { requireApiPermission } from '@/lib/auth/server-permissions';
 import { invitationCreateSchema } from '@/lib/validation/admin';
 import { generateToken, hashToken } from '@/lib/tokens';
 import { writeAuditLog } from '@/lib/audit';
+import { sendEmail } from '@/lib/email';
+import { InvitationEmail } from '@/lib/email/templates';
 
 function getAppUrl(request: Request) {
   return process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? new URL(request.url).origin;
@@ -88,6 +90,37 @@ export async function POST(request: Request) {
       .returning();
 
     const acceptUrl = `${getAppUrl(request)}/auth/accept-invite?token=${token}`;
+
+    const inviter = authz.session.user;
+    const inviterName =
+      [inviter.firstName, inviter.lastName].filter(Boolean).join(' ').trim() || inviter.email;
+
+    let roleName: string | null = null;
+    let organizationName: string | null = null;
+    if (created.roleId) {
+      const [role] = await db
+        .select({ name: roles.name })
+        .from(roles)
+        .where(eq(roles.id, created.roleId))
+        .limit(1);
+      roleName = role?.name ?? null;
+    }
+    if (created.organizationId) {
+      const [organization] = await db
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, created.organizationId))
+        .limit(1);
+      organizationName = organization?.name ?? null;
+    }
+
+    sendEmail({
+      to: created.email,
+      subject: organizationName ? `Join ${organizationName}` : 'You have been invited',
+      react: InvitationEmail({ inviterName, organizationName, roleName, acceptUrl }),
+    }).catch((err) => {
+      console.error('[INVITATION_EMAIL]', err);
+    });
 
     await writeAuditLog({
       sessionUser: authz.session.user,

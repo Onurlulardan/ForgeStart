@@ -31,3 +31,7 @@ export {
   type UseFileUploadOptions,
   type UseFileUploadReturn,
 } from './use-file-upload';
+export { useSocket, type UseSocketReturn } from './use-socket';
+export { useSocketEvent } from './use-socket-event';
+export { usePresence, type UsePresenceReturn } from './use-presence';
+export { useRealtimeQueryInvalidator } from './use-realtime-query';

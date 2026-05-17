@@ -4,7 +4,7 @@ import { db } from '@/db';
 import { emailVerificationTokens, users } from '@/db/schema';
 import type { User } from '@/db/types';
 import { sendEmail } from '@/lib/email';
-import { VerifyEmail } from '@/lib/email/templates';
+import { VerifyEmail, WelcomeEmail } from '@/lib/email/templates';
 import { generateToken, hashToken } from '@/lib/tokens';
 
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -82,6 +82,13 @@ export interface VerifyOutcome {
   userId?: string;
 }
 
+interface VerifiedRecipient {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  name: string | null;
+}
+
 export async function verifyEmailToken(token: string): Promise<VerifyOutcome> {
   if (!token || token.length < 20) return { ok: false, reason: 'invalid' };
 
@@ -98,17 +105,57 @@ export async function verifyEmailToken(token: string): Promise<VerifyOutcome> {
     return { ok: false, reason: 'expired' };
   }
 
+  let recipient: VerifiedRecipient | null = null;
+
   await db.transaction(async (tx) => {
     await tx
       .update(emailVerificationTokens)
       .set({ usedAt: new Date() })
       .where(eq(emailVerificationTokens.id, record.id));
 
+    const [previous] = await tx
+      .select({
+        verified: users.emailVerified,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        name: users.name,
+      })
+      .from(users)
+      .where(eq(users.id, record.userId))
+      .limit(1);
+
     await tx
       .update(users)
       .set({ emailVerified: new Date() })
       .where(and(eq(users.id, record.userId), isNull(users.emailVerified)));
+
+    if (previous && !previous.verified) {
+      recipient = {
+        email: previous.email,
+        firstName: previous.firstName,
+        lastName: previous.lastName,
+        name: previous.name,
+      };
+    }
   });
+
+  if (recipient) {
+    const verifiedRecipient: VerifiedRecipient = recipient;
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? 'http://localhost:3000';
+    const recipientName =
+      [verifiedRecipient.firstName, verifiedRecipient.lastName].filter(Boolean).join(' ').trim() ||
+      verifiedRecipient.name ||
+      undefined;
+    sendEmail({
+      to: verifiedRecipient.email,
+      subject: 'Welcome aboard',
+      react: WelcomeEmail({ recipientName, appUrl }),
+    }).catch((err) => {
+      console.error('[WELCOME_EMAIL]', err);
+    });
+  }
 
   return { ok: true, userId: record.userId };
 }

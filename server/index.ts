@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { Server, type Socket } from 'socket.io';
 import type {
   ClientToServerEvents,
@@ -22,13 +22,64 @@ const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.AUTH_URL ??
   'http://localhost:3000';
+const INTERNAL_SECRET = process.env.AUTH_SECRET ?? '';
 
-const httpServer = createServer((req, res) => {
-  if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, ts: new Date().toISOString() }));
+interface InternalEmitBody {
+  event: keyof ServerToClientEvents;
+  payload: unknown;
+  room?: string;
+}
+
+async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    req.on('end', () => {
+      try {
+        const raw = Buffer.concat(chunks).toString('utf8');
+        if (!raw) return resolve(null);
+        resolve(JSON.parse(raw));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function sendJson(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(body));
+}
+
+const httpServer = createServer(async (req, res) => {
+  if (req.url === '/health' && req.method === 'GET') {
+    sendJson(res, 200, { ok: true, ts: new Date().toISOString() });
     return;
   }
+
+  if (req.url === '/internal/emit' && req.method === 'POST') {
+    const auth = req.headers.authorization ?? '';
+    if (!INTERNAL_SECRET || auth !== `Bearer ${INTERNAL_SECRET}`) {
+      sendJson(res, 401, { ok: false, error: 'unauthorized' });
+      return;
+    }
+    try {
+      const body = (await readJsonBody(req)) as InternalEmitBody | null;
+      if (!body?.event) {
+        sendJson(res, 400, { ok: false, error: 'event is required' });
+        return;
+      }
+      const target = body.room ? io.to(body.room) : io;
+      target.emit(body.event, body.payload as never);
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      console.error('[realtime] /internal/emit', err);
+      sendJson(res, 500, { ok: false, error: 'internal error' });
+    }
+    return;
+  }
+
   res.writeHead(404);
   res.end();
 });

@@ -8,6 +8,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { failure, parseJson, success, withAuth } from '@/lib/actions';
 import { profileUpdateSchema } from '@/lib/validation/admin';
+import { deleteUpload, getUploadUrl } from '@/lib/storage/service';
 
 export const updateProfileAction = withAuth(async (session, input: unknown) => {
   const parsed = parseJson(profileUpdateSchema, input);
@@ -39,7 +40,6 @@ export const updateProfileAction = withAuth(async (session, input: unknown) => {
       firstName: data.firstName ?? user.firstName,
       lastName: data.lastName ?? user.lastName,
       phone: data.phone ?? user.phone,
-      avatar: data.avatar ?? user.avatar,
       ...(newPasswordHash ? { passwordHash: newPasswordHash } : {}),
       updatedAt: new Date(),
     })
@@ -49,15 +49,38 @@ export const updateProfileAction = withAuth(async (session, input: unknown) => {
   return success({ updated: true });
 });
 
-const avatarUpdateSchema = z.object({ uploadId: z.string().uuid().nullable() });
+const avatarUpdateSchema = z
+  .object({
+    uploadId: z.string().uuid().nullable(),
+  })
+  .strict();
 
 export const setAvatarAction = withAuth(async (session, input: unknown) => {
   const parsed = parseJson(avatarUpdateSchema, input);
   if (!parsed.ok) return parsed;
+
+  const [user] = await db.select().from(users).where(eq(users.id, session.user.id)).limit(1);
+  if (!user) return failure('User not found');
+
+  const previousUploadId = user.avatarUploadId;
+  const nextUploadId = parsed.data.uploadId;
+  const nextUrl = nextUploadId ? await getUploadUrl(nextUploadId) : null;
+
   await db
     .update(users)
-    .set({ avatar: parsed.data.uploadId, updatedAt: new Date() })
+    .set({
+      avatar: nextUrl,
+      avatarUploadId: nextUploadId,
+      updatedAt: new Date(),
+    })
     .where(eq(users.id, session.user.id));
+
+  if (previousUploadId && previousUploadId !== nextUploadId) {
+    await deleteUpload(previousUploadId, session.user.id).catch((err) => {
+      console.error('[setAvatarAction.deletePrevious]', err);
+    });
+  }
+
   revalidatePath('/administrations/users/profile/edit');
-  return success({ updated: true });
+  return success({ uploadId: nextUploadId, url: nextUrl });
 });

@@ -7,8 +7,10 @@ import { z } from 'zod';
 import authConfig from './auth.config';
 import { db } from '@/db';
 import { accounts, sessions, users, verificationTokens } from '@/db/schema';
-import { getSessionUserPayload, logSecurityEvent } from '@/lib/auth/session-data';
+import { getClientInfo, getSessionUserPayload, logSecurityEvent } from '@/lib/auth/session-data';
 import type { SessionUser } from '@/lib/auth/types';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { RATE_LIMIT_PRESETS } from '@/lib/rate-limit/presets';
 
 const credentialsSchema = z.object({
   email: z
@@ -48,6 +50,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const { email, password } = parsed.data;
+
+        const { ipAddress } = getClientInfo(request);
+        const limit = await checkRateLimit(
+          `auth-login:${email}:${ipAddress}`,
+          RATE_LIMIT_PRESETS.authLogin
+        );
+        if (!limit.success) {
+          await logSecurityEvent({
+            email,
+            status: 'FAILED',
+            type: 'LOGIN',
+            message: 'Rate limit exceeded',
+            request,
+          });
+          throw new Error('Too many login attempts. Try again later.');
+        }
         const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
         if (!user?.passwordHash) {

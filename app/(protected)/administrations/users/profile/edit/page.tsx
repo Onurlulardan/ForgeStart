@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+import { useTransition } from 'react';
 import { z } from 'zod';
 import { LockIcon, SaveIcon } from 'lucide-react';
 import {
@@ -20,7 +22,7 @@ import {
   SubmitButton,
 } from '@/components/forms';
 import { AvatarUploader } from '@/components/uploads';
-import { profileApi } from '@/lib/api/client';
+import { setAvatarAction, updateProfileAction } from '@/app/actions/profile';
 import { profileUpdateSchema } from '@/lib/validation/admin';
 import { initials } from '@/lib/formatters';
 import type { ProfileUpdateInput } from '@/lib/api/client';
@@ -49,6 +51,7 @@ export default function ProfileEditPage() {
   const router = useRouter();
   const { data: session, update: updateSession } = useSession();
   const user = session?.user;
+  const [avatarPending, startAvatarTransition] = useTransition();
 
   if (!user) return null;
 
@@ -59,30 +62,53 @@ export default function ProfileEditPage() {
     firstName: user.firstName ?? '',
     lastName: user.lastName ?? '',
     phone: user.phone ?? '',
-    avatar: user.avatar ?? '',
   };
 
   const submitProfile = async (values: ProfileUpdateInput) => {
-    const updated = await profileApi.update(values);
+    const result = await updateProfileAction(values);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
     await updateSession({
       ...session,
       user: {
         ...user,
-        firstName: updated.firstName,
-        lastName: updated.lastName,
-        avatar: updated.avatar,
-        phone: updated.phone,
+        firstName: values.firstName ?? user.firstName,
+        lastName: values.lastName ?? user.lastName,
+        phone: values.phone ?? user.phone,
       },
     });
+    toast.success(tCommon('save'));
     router.refresh();
   };
 
   const submitPassword = async (values: PasswordFormValues) => {
-    await profileApi.update({
+    const result = await updateProfileAction({
       currentPassword: values.currentPassword,
       newPassword: values.newPassword,
     });
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(tCommon('update'));
     router.refresh();
+  };
+
+  const handleAvatarChange = (uploadId: string | null, url: string | null) => {
+    startAvatarTransition(async () => {
+      const result = await setAvatarAction({ uploadId });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      await updateSession({
+        ...session,
+        user: { ...user, avatar: url, avatarUploadId: uploadId },
+      });
+      router.refresh();
+    });
   };
 
   return (
@@ -92,21 +118,13 @@ export default function ProfileEditPage() {
           <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
             <AvatarUploader
               currentUrl={user.avatar ?? undefined}
+              currentUploadId={user.avatarUploadId ?? undefined}
               fallback={initials(fullName || user.email || '')}
-              onUploaded={async (upload) => {
-                const url = upload.publicUrl ?? `/api/uploads/${upload.id}`;
-                await profileApi.update({ avatar: url });
-                await updateSession({
-                  ...session,
-                  user: { ...user, avatar: url },
-                });
-                router.refresh();
-              }}
-              onRemoved={async () => {
-                await profileApi.update({ avatar: '' });
-                await updateSession({ ...session, user: { ...user, avatar: null } });
-                router.refresh();
-              }}
+              disabled={avatarPending}
+              onUploaded={(upload) =>
+                handleAvatarChange(upload.id, upload.publicUrl ?? `/api/uploads/${upload.id}`)
+              }
+              onRemoved={() => handleAvatarChange(null, null)}
             />
             <h2 className="mt-2 text-lg font-semibold">{fullName || user.email}</h2>
             <p className="text-sm text-muted-foreground">{user.email}</p>

@@ -14,6 +14,8 @@ import { ConfirmDialogProvider } from '@/components/layout/confirm-dialog-host';
 import { ErrorBoundary } from '@/components/feedback/error-boundary';
 import { getQueryClient } from '@/lib/query/client';
 import { ThemeCustomizerProvider } from '@/contexts/ThemeCustomizerContext';
+import { useRealtimeQueryInvalidator } from '@/lib/hooks';
+import type { ThemeTokens } from '@/lib/theme';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -34,7 +36,17 @@ function NotificationSetup({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function ThemeBridge({ children }: { children: ReactNode }) {
+function RealtimeBridge({ children }: { children: ReactNode }) {
+  useRealtimeQueryInvalidator();
+  return <>{children}</>;
+}
+
+interface ThemeBridgeProps {
+  children: ReactNode;
+  systemTheme: ThemeTokens | null;
+}
+
+function ThemeBridge({ children, systemTheme }: ThemeBridgeProps) {
   const { resolvedTheme, setTheme } = useNextTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -44,12 +56,14 @@ function ThemeBridge({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ isDark, toggleTheme }}>
-      <ThemeCustomizerProvider>
+      <ThemeCustomizerProvider initialTokens={systemTheme ?? undefined}>
         <TooltipProvider>
           <NotificationProvider>
             <ConfirmDialogProvider>
               <NotificationSetup>
-                <ErrorBoundary>{children}</ErrorBoundary>
+                <ErrorBoundary>
+                  <RealtimeBridge>{children}</RealtimeBridge>
+                </ErrorBoundary>
               </NotificationSetup>
             </ConfirmDialogProvider>
             <Toaster position="top-right" closeButton richColors />
@@ -64,9 +78,10 @@ interface ProvidersProps {
   children: ReactNode;
   locale: string;
   messages: AbstractIntlMessages;
+  systemTheme: ThemeTokens | null;
 }
 
-export function Providers({ children, locale, messages }: ProvidersProps) {
+export function Providers({ children, locale, messages, systemTheme }: ProvidersProps) {
   const [queryClient] = useState(() => getQueryClient());
 
   return (
@@ -79,7 +94,7 @@ export function Providers({ children, locale, messages }: ProvidersProps) {
             enableSystem
             disableTransitionOnChange
           >
-            <ThemeBridge>{children}</ThemeBridge>
+            <ThemeBridge systemTheme={systemTheme}>{children}</ThemeBridge>
           </NextThemesProvider>
           {process.env.NODE_ENV === 'development' && (
             <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />

@@ -8,6 +8,7 @@ import {
   SaveIcon,
   ServerCogIcon,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -23,15 +24,23 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageShell } from '@/components/layout';
-import {
-  Form,
-  FormField,
-  SubmitButton,
-} from '@/components/forms';
+import { Form, FormField, SubmitButton } from '@/components/forms';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings, useAppSettingsMutation } from '@/lib/query';
 import { getRequest } from '@/lib/apiClient';
 import type { AppSettingItem, SettingsUpdateInput } from '@/lib/api/client';
+
+const FormRichText = dynamic(
+  () => import('@/components/forms/form-rich-text').then((mod) => mod.FormRichText),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-40 w-full" />,
+  }
+);
+
+const RICH_TEXT_KEYS = new Set(['system.welcomeMessage', 'system.legal.privacy', 'system.legal.terms']);
+const MULTILINE_HINTS = ['description', 'message', 'body', 'content'];
 
 interface HealthStatus {
   ok: boolean;
@@ -65,6 +74,11 @@ const settingsFormSchema = z.object({
 });
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
 
+function isMultilineKey(key: string): boolean {
+  const normalized = key.toLowerCase();
+  return MULTILINE_HINTS.some((hint) => normalized.includes(hint));
+}
+
 function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
   const t = useTranslations('admin.system');
   const mutation = useAppSettingsMutation();
@@ -87,25 +101,56 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
       values={defaultValues as never}
       onSubmit={submit}
     >
-      {settings.map((setting) => (
-        <FormField<SettingsFormValues>
-          key={setting.key}
-          name={`values.${setting.key}` as never}
-          label={setting.label}
-          description={setting.description ?? undefined}
-        >
-          {(field) => (
-            <Input
-              id={field.name}
-              value={(field.value as string | undefined) ?? ''}
-              onChange={(event) => field.onChange(event.target.value)}
-              onBlur={field.onBlur}
-              type={setting.isSecret ? 'password' : 'text'}
+      {settings.map((setting) => {
+        const fieldName = `values.${setting.key}` as never;
+
+        if (RICH_TEXT_KEYS.has(setting.key)) {
+          return (
+            <FormRichText
+              key={setting.key}
+              name={fieldName}
+              label={setting.label}
+              description={setting.description ?? undefined}
               placeholder={setting.description ?? setting.key}
             />
-          )}
-        </FormField>
-      ))}
+          );
+        }
+
+        return (
+          <FormField<SettingsFormValues>
+            key={setting.key}
+            name={fieldName}
+            label={setting.label}
+            description={setting.description ?? undefined}
+          >
+            {(field) => {
+              const value = (field.value as string | undefined) ?? '';
+              if (isMultilineKey(setting.key) && !setting.isSecret) {
+                return (
+                  <Textarea
+                    id={field.name}
+                    rows={4}
+                    value={value}
+                    onChange={(event) => field.onChange(event.target.value)}
+                    onBlur={field.onBlur}
+                    placeholder={setting.description ?? setting.key}
+                  />
+                );
+              }
+              return (
+                <Input
+                  id={field.name}
+                  value={value}
+                  onChange={(event) => field.onChange(event.target.value)}
+                  onBlur={field.onBlur}
+                  type={setting.isSecret ? 'password' : 'text'}
+                  placeholder={setting.description ?? setting.key}
+                />
+              );
+            }}
+          </FormField>
+        );
+      })}
       <div className="flex justify-end">
         <SubmitButton>
           <SaveIcon />

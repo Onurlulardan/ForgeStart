@@ -9,6 +9,7 @@ const baseUser: SessionUser = {
   emailVerified: null,
   image: null,
   avatar: null,
+  avatarUploadId: null,
   firstName: 'Jane',
   lastName: 'Admin',
   phone: null,

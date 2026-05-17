@@ -58,13 +58,30 @@ axiosInstance.interceptors.response.use(
     }
 
     const parsed = parseApiError(error);
-    const errorMessage = parsed.message || 'An error occurred';
+    let errorMessage = parsed.message || 'An error occurred';
+
+    if (error.response?.status === 429) {
+      const retryAfter =
+        Number(error.response.headers?.['retry-after']) ||
+        (typeof (error.response.data as { retryAfter?: number })?.retryAfter === 'number'
+          ? (error.response.data as { retryAfter: number }).retryAfter
+          : null);
+      if (retryAfter && retryAfter > 0) {
+        errorMessage = `Too many requests. Retry in ${retryAfter}s.`;
+      } else {
+        errorMessage = 'Too many requests. Slow down and try again shortly.';
+      }
+    }
 
     if (typeof window !== 'undefined') {
       const showNotification = window.__showNotification as ShowNotificationFunction;
       const truncatedMessage =
         errorMessage.length > 500 ? errorMessage.slice(0, 497) + '...' : errorMessage;
-      showNotification?.('error', 'Error', truncatedMessage);
+      showNotification?.(
+        error.response?.status === 429 ? 'warning' : 'error',
+        error.response?.status === 429 ? 'Rate limited' : 'Error',
+        truncatedMessage
+      );
     }
 
     throw new Error(errorMessage);

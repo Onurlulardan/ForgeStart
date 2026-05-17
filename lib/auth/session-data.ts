@@ -174,6 +174,7 @@ export async function getSessionUserPayload(userId: string): Promise<SessionUser
     email: user.email,
     image: user.image,
     avatar: user.avatar,
+    avatarUploadId: user.avatarUploadId,
     firstName: user.firstName,
     lastName: user.lastName,
     phone: user.phone,

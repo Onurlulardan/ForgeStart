@@ -50,12 +50,14 @@ export const users = pgTable(
     lastName: text('last_name'),
     phone: text('phone'),
     avatar: text('avatar'),
+    avatarUploadId: uuid('avatar_upload_id'),
     status: userStatusEnum('status').notNull().default('ACTIVE'),
     ...timestamps,
   },
   (table) => ({
     emailIdx: uniqueIndex('users_email_idx').on(table.email),
     statusIdx: index('users_status_idx').on(table.status),
+    avatarUploadIdx: index('users_avatar_upload_id_idx').on(table.avatarUploadId),
   })
 );
 

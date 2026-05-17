@@ -75,6 +75,14 @@ const DEFAULT_SETTINGS = [
     isSecret: false,
   },
   {
+    key: 'system.welcomeMessage',
+    label: 'Welcome message',
+    value:
+      '<h2>Welcome to your workspace</h2><p>This is rendered as rich text via Tiptap and stored in app_settings.</p>',
+    description: 'Rich text message shown to new users (rendered via Tiptap).',
+    isSecret: false,
+  },
+  {
     key: 'auth.session_max_age_days',
     label: 'Session max age',
     value: '7',
