@@ -1,36 +1,27 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import knex from '@/knex';
+import { count, eq } from 'drizzle-orm';
+import { db } from '@/db';
+import { organizations, users } from '@/db/schema';
+import { handleRouteError } from '@/lib/api/response';
+import { requireApiPermission } from '@/lib/auth/server-permissions';
 
 export async function GET() {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authz = await requireApiPermission('dashboard', 'view');
+    if (!authz.ok) return authz.response;
 
-    // Get total organizations count
-    const [orgCount] = await knex('Organization').count('* as count');
-    const totalOrganizations = parseInt(orgCount.count as string, 10);
-
-    // Get users statistics
-    const [userCount] = await knex('User').count('* as count');
-    const totalUsers = parseInt(userCount.count as string, 10);
-    
-    const [activeUserCount] = await knex('User')
-      .where({ status: 'ACTIVE' })
-      .count('* as count');
-    const activeUsers = parseInt(activeUserCount.count as string, 10);
+    const [[orgCount], [userCount], [activeUserCount]] = await Promise.all([
+      db.select({ count: count() }).from(organizations),
+      db.select({ count: count() }).from(users),
+      db.select({ count: count() }).from(users).where(eq(users.status, 'ACTIVE')),
+    ]);
 
     return NextResponse.json({
-      totalOrganizations,
-      totalUsers,
-      activeUsers,
+      totalOrganizations: orgCount.count,
+      totalUsers: userCount.count,
+      activeUsers: activeUserCount.count,
     });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleRouteError('[DASHBOARD_STATS_GET]', error);
   }
 }

@@ -29,9 +29,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.codex-devserver*.log
+tmp-login*.png
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +42,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tests
+/playwright-report
+/test-results
+/playwright/.auth
+
+# docker
+postgres-data
+
+# uploads (local-disk storage driver default)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# server build (socket.io)
+/server/dist

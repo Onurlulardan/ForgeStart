@@ -1,286 +1,103 @@
-import { NextResponse, NextRequest } from 'next/server';
-import knex from '@/knex';
-import { hash } from 'bcryptjs';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { requirePermission } from '@/lib/auth/server-permissions';
+import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { and, eq, ne } from 'drizzle-orm';
+import { db } from '@/db';
+import { organizationMembers, userRoles, users } from '@/db/schema';
+import { getUserById } from '@/lib/api/admin-queries';
+import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
+import { requireApiPermission } from '@/lib/auth/server-permissions';
+import { updateUserSchema } from '@/lib/validation/admin';
 
-// GET /api/users/[id]
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('user', 'view');
+    const authz = await requireApiPermission('user', 'view');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
-
-    // Get user details
-    const user = await knex('User')
-      .where({ id })
-      .first(
-        'id',
-        'email',
-        'firstName',
-        'lastName',
-        'phone',
-        'avatar',
-        'status',
-        'emailVerified',
-        'createdAt',
-        'updatedAt'
-      );
-      
-    if (user) {
-      // Get user roles
-      const userRoles = await knex('UserRole')
-        .where({ userId: id })
-        .join('Role', 'UserRole.roleId', 'Role.id')
-        .select(
-          'Role.id',
-          'Role.name',
-          'Role.description'
-        );
-
-      user.userRoles = userRoles.map(role => ({
-        role: {
-          id: role.id,
-          name: role.name,
-          description: role.description
-        }
-      }));
-
-      // Get user memberships
-      const memberships = await knex('OrganizationMember')
-        .where({ userId: id })
-        .join('Organization', 'OrganizationMember.organizationId', 'Organization.id')
-        .leftJoin('Role', 'OrganizationMember.roleId', 'Role.id')
-        .select(
-          'OrganizationMember.id as membershipId',
-          'Organization.id as organizationId',
-          'Organization.name as organizationName',
-          'Organization.slug as organizationSlug',
-          'Role.id as roleId',
-          'Role.name as roleName',
-          'Role.description as roleDescription'
-        );
-
-      user.memberships = memberships.map(m => ({
-        id: m.membershipId,
-        organization: {
-          id: m.organizationId,
-          name: m.organizationName,
-          slug: m.organizationSlug
-        },
-        role: m.roleId ? {
-          id: m.roleId,
-          name: m.roleName,
-          description: m.roleDescription
-        } : null
-      }));
-    }
-
-    if (!user) {
-      return new NextResponse('User not found', { status: 404 });
-    }
+    const user = await getUserById(id);
+    if (!user) return jsonError('User not found', 404);
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error('[USER_GET]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[USERS_ID_GET]', error);
   }
 }
 
-// PUT /api/users/[id]
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('user', 'edit');
+    const authz = await requireApiPermission('user', 'edit');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
-    const body = await request.json();
-    const { email, password, firstName, lastName, phone, roleIds, status } = body;
+    const parsed = await parseJson(request, updateUserSchema);
+    if (!parsed.ok) return parsed.response;
 
-    // Check if user exists
-    const existingUser = await knex('User')
-      .where({ id })
-      .first();
+    const [existingUser] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    if (!existingUser) return jsonError('User not found', 404);
 
-    if (!existingUser) {
-      return new NextResponse('User not found', { status: 404 });
+    const [duplicateEmail] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.email, parsed.data.email), ne(users.id, id)))
+      .limit(1);
+
+    if (duplicateEmail) {
+      return jsonError('Email already exists', 409);
     }
 
-    // If email is being changed, check if new email is already in use
-    if (email && email !== existingUser.email) {
-      const emailInUse = await knex('User')
-        .where({ email })
-        .first();
+    const passwordHash = parsed.data.password
+      ? await bcrypt.hash(parsed.data.password, 12)
+      : existingUser.passwordHash;
 
-      if (emailInUse) {
-        return new NextResponse('Email already in use', { status: 400 });
-      }
-    }
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          email: parsed.data.email,
+          passwordHash,
+          firstName: parsed.data.firstName,
+          lastName: parsed.data.lastName,
+          phone: parsed.data.phone,
+          status: parsed.data.status,
+          name: [parsed.data.firstName, parsed.data.lastName].filter(Boolean).join(' ') || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, id));
 
-    // Prepare update data
-    const updateData: any = {
-      ...(email && { email }),
-      ...(firstName && { firstName }),
-      ...(lastName && { lastName }),
-      ...(phone && { phone }),
-      ...(status && { status }),
-      updatedAt: knex.fn.now()
-    };
-
-    // If password is provided, hash it
-    if (password) {
-      updateData.password = await hash(password, 12);
-    }
-
-    const updatedUser = await knex.transaction(async (trx) => {
-      // 1. Update user
-      await trx('User')
-        .where({ id })
-        .update(updateData);
-      
-      // 2. Update roles if provided
-      if (roleIds && roleIds.length > 0) {
-        // Delete existing roles
-        await trx('UserRole')
-          .where({ userId: id })
-          .delete();
-        
-        // Add new roles
-        await Promise.all(
-          roleIds.map((roleId: string) =>
-            trx('UserRole')
-              .insert({
-                id: trx.raw('uuid_generate_v4()'),
-                userId: id,
-                roleId,
-                createdAt: trx.fn.now(),
-                updatedAt: trx.fn.now()
-              })
-          )
+      await tx.delete(userRoles).where(eq(userRoles.userId, id));
+      if (parsed.data.roleIds.length) {
+        await tx.insert(userRoles).values(
+          parsed.data.roleIds.map((roleId) => ({
+            userId: id,
+            roleId,
+          }))
         );
       }
-      
-      // 3. Get updated user
-      const user = await trx('User')
-        .where({ id })
-        .first(
-          'id',
-          'email',
-          'firstName',
-          'lastName',
-          'phone',
-          'avatar',
-          'status',
-          'emailVerified',
-          'createdAt',
-          'updatedAt'
-        );
-      
-      // 4. Get user roles
-      const userRoles = await trx('UserRole')
-        .where({ userId: id })
-        .join('Role', 'UserRole.roleId', 'Role.id')
-        .select(
-          'Role.id',
-          'Role.name',
-          'Role.description'
-        );
-
-      // 5. Get user memberships
-      const memberships = await trx('OrganizationMember')
-        .where({ userId: id })
-        .join('Organization', 'OrganizationMember.organizationId', 'Organization.id')
-        .leftJoin('Role', 'OrganizationMember.roleId', 'Role.id')
-        .select(
-          'OrganizationMember.id as membershipId',
-          'Organization.id as organizationId',
-          'Organization.name as organizationName',
-          'Organization.slug as organizationSlug',
-          'Role.id as roleId',
-          'Role.name as roleName',
-          'Role.description as roleDescription'
-        );
-
-      // 6. Format and return user
-      return {
-        ...user,
-        userRoles: userRoles.map(role => ({
-          role: {
-            id: role.id,
-            name: role.name,
-            description: role.description
-          }
-        })),
-        memberships: memberships.map(m => ({
-          id: m.membershipId,
-          organization: {
-            id: m.organizationId,
-            name: m.organizationName,
-            slug: m.organizationSlug
-          },
-          role: m.roleId ? {
-            id: m.roleId,
-            name: m.roleName,
-            description: m.roleDescription
-          } : null
-        }))
-      };
     });
 
-    return NextResponse.json(updatedUser);
+    return NextResponse.json(await getUserById(id));
   } catch (error) {
-    console.error('[USER_PUT]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[USERS_ID_PUT]', error);
   }
 }
 
-// DELETE /api/users/[id]
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('user', 'delete');
+    const authz = await requireApiPermission('user', 'delete');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
+    const [existingUser] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    if (!existingUser) return jsonError('User not found', 404);
 
-    // Check if user exists
-    const user = await knex('User')
-      .where({ id })
-      .first();
-
-    if (!user) {
-      return new NextResponse('User not found', { status: 404 });
-    }
-
-    // Delete user - using transaction to ensure all related records are deleted
-    await knex.transaction(async (trx) => {
-      // First delete related records
-      await trx('UserRole').where({ userId: id }).delete();
-      await trx('OrganizationMember').where({ userId: id }).delete();
-      
-      // Then delete the user
-      await trx('User').where({ id }).delete();
+    await db.transaction(async (tx) => {
+      await tx.delete(userRoles).where(eq(userRoles.userId, id));
+      await tx.delete(organizationMembers).where(eq(organizationMembers.userId, id));
+      await tx.delete(users).where(eq(users.id, id));
     });
 
-    return NextResponse.json({ message: 'User deleted successfully' });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('[USER_DELETE]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[USERS_ID_DELETE]', error);
   }
 }

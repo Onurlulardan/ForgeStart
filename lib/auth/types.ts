@@ -1,79 +1,76 @@
-// Knex-compatible enums (no Prisma dependency)
-export enum UserStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  SUSPENDED = 'SUSPENDED',
-}
-export enum PermissionTarget {
-  USER = 'USER',
-  ROLE = 'ROLE',
-  ORGANIZATION = 'ORGANIZATION',
-}
+import type { DefaultSession } from 'next-auth';
 import 'next-auth';
+import 'next-auth/jwt';
 
-export interface Permission {
-  target: PermissionTarget;
+export type PermissionActionPayload = {
+  slug: string;
+};
+
+export type PermissionPayload = {
+  target: 'USER' | 'ROLE' | 'ORGANIZATION';
   resource: {
     slug: string;
   };
-  actions: {
-    slug: string;
-  }[];
-}
+  actions: PermissionActionPayload[];
+};
 
-export interface UserRoleWithDetails {
+export type UserRoleWithDetails = {
   role: {
     id: string;
     name: string;
     description: string;
   };
-}
+};
 
-export interface OrganizationRole {
+export type OrganizationRole = {
   id: string;
   name: string;
-  permissions: Permission[];
-}
+  description: string;
+  permissions: PermissionPayload[];
+};
 
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  permissions: Permission[];
-}
-
-export interface OrganizationMembership {
+export type OrganizationMembership = {
   id: string;
   role: OrganizationRole | null;
-  organization: Organization;
-}
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    permissions: PermissionPayload[];
+  };
+};
+
+export type SessionUser = DefaultSession['user'] & {
+  id: string;
+  email: string;
+  avatar: string | null;
+  avatarUploadId: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  emailVerified: Date | null;
+  userRoles: UserRoleWithDetails[];
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  permissions: PermissionPayload[];
+  memberships: OrganizationMembership[];
+};
 
 declare module 'next-auth' {
   interface Session {
-    user: {
-      id: string;
-      email: string;
-      avatar: string | null;
-      firstName: string | null;
-      lastName: string | null;
-      phone: string | null;
-      userRoles: UserRoleWithDetails[];
-      status: UserStatus;
-      permissions: Permission[];
-      memberships: OrganizationMembership[];
-    };
+    user: SessionUser;
   }
 
   interface User {
     id: string;
     email: string;
+    avatar: string | null;
     firstName: string | null;
     lastName: string | null;
     phone: string | null;
-    avatar: string | null;
+    emailVerified: Date | null;
     userRoles: UserRoleWithDetails[];
-    status: UserStatus;
-    permissions: Permission[];
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    permissions: PermissionPayload[];
     memberships: OrganizationMembership[];
   }
 }
@@ -82,13 +79,14 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     email: string;
+    avatar: string | null;
     firstName: string | null;
     lastName: string | null;
     phone: string | null;
-    avatar: string | null;
+    emailVerified: Date | null;
     userRoles: UserRoleWithDetails[];
-    status: UserStatus;
-    permissions: Permission[];
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    permissions: PermissionPayload[];
     memberships: OrganizationMembership[];
   }
 }

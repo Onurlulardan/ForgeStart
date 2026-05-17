@@ -1,0 +1,159 @@
+name: forgestart
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-forgestart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgestart}
+      POSTGRES_DB: ${POSTGRES_DB:-forgestart}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    profiles: ['dev', 'prod', 'seed']
+    build:
+      context: .
+      target: dev
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: yarn db:migrate
+
+  seed:
+    profiles: ['dev', 'seed']
+    build:
+      context: .
+      target: dev
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
+      SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME:-Super}
+      SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME:-Admin}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-change-this-password}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: yarn db:seed
+
+  app:
+    profiles: ['dev']
+    build:
+      context: .
+      target: dev
+    environment:
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
+      REALTIME_URL: ${DOCKER_REALTIME_URL:-http://realtime:4000}
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    volumes:
+      - ./app:/app/app
+      - ./components:/app/components
+      - ./contexts:/app/contexts
+      - ./core:/app/core
+      - ./db:/app/db
+      - ./hooks:/app/hooks
+      - ./lib:/app/lib
+      - ./public:/app/public
+      - ./scripts:/app/scripts
+      - ./server:/app/server
+      - ./tests:/app/tests
+      - ./auth.ts:/app/auth.ts
+      - ./auth.config.ts:/app/auth.config.ts
+      - ./components.json:/app/components.json
+      - ./instrumentation.ts:/app/instrumentation.ts
+      - ./next.config.ts:/app/next.config.ts
+      - ./playwright.config.ts:/app/playwright.config.ts
+      - ./postcss.config.mjs:/app/postcss.config.mjs
+      - ./proxy.ts:/app/proxy.ts
+      - ./tailwind.config.ts:/app/tailwind.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    command: yarn dev --hostname 0.0.0.0 --port 3000
+
+  realtime:
+    profiles: ['dev', 'prod']
+    build:
+      context: .
+      target: dev
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
+      AUTH_URL: ${DOCKER_APP_URL:-http://app:3000}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      REALTIME_PORT: ${REALTIME_PORT:-4000}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+    ports:
+      - '${REALTIME_PORT:-4000}:4000'
+    volumes:
+      - ./server:/app/server
+      - ./lib:/app/lib
+      - ./db:/app/db
+      - ./auth.ts:/app/auth.ts
+      - ./auth.config.ts:/app/auth.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: yarn realtime:start
+
+  minio:
+    profiles: ['storage']
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - '${MINIO_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app-prod:
+    profiles: ['prod']
+    build:
+      context: .
+      target: runner
+    environment:
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
+      REALTIME_URL: ${DOCKER_REALTIME_URL:-http://realtime:4000}
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    networks:
+      default:
+        aliases:
+          - app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: yarn start --hostname 0.0.0.0 --port 3000
+
+volumes:
+  postgres-data:
+    name: ${POSTGRES_DATA_VOLUME:-forgestart_postgres_data}
+  minio-data:
+    name: ${MINIO_DATA_VOLUME:-forgestart_minio_data}

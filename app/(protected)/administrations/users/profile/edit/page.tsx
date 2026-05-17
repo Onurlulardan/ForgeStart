@@ -1,276 +1,206 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+import { useTransition } from 'react';
+import { z } from 'zod';
+import { LockIcon, SaveIcon } from 'lucide-react';
 import {
-  Button,
-  Form,
-  Input,
   Card,
-  Typography,
-  Avatar,
-  Row,
-  Col,
-  Divider,
-  Upload,
-  Tabs,
-} from 'antd';
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageShell } from '@/components/layout';
 import {
-  UserOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  CameraOutlined,
-  SaveOutlined,
-  LockOutlined,
-} from '@ant-design/icons';
-import type { UploadChangeParam } from 'antd/es/upload';
-import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
-import { putRequest } from '@/lib/apiClient';
+  Form,
+  FormInput,
+  SubmitButton,
+} from '@/components/forms';
+import { AvatarUploader } from '@/components/uploads';
+import { setAvatarAction, updateProfileAction } from '@/app/actions/profile';
+import { profileUpdateSchema } from '@/lib/validation/admin';
+import { initials } from '@/lib/formatters';
+import type { ProfileUpdateInput } from '@/lib/api/client';
 
-const { Title, Text } = Typography;
-
-interface ProfileFormData {
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  avatar?: string;
-}
-
-interface PasswordFormData {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
+const passwordFormSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(8),
+    confirmPassword: z.string().min(8),
+  })
+  .superRefine((value, ctx) => {
+    if (value.newPassword !== value.confirmPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['confirmPassword'],
+        message: 'Passwords do not match',
+      });
+    }
+  });
+type PasswordFormValues = z.input<typeof passwordFormSchema>;
 
 export default function ProfileEditPage() {
-  const [loading, setLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string>();
+  const t = useTranslations('admin.profile');
+  const tAuth = useTranslations('auth');
+  const tCommon = useTranslations('common');
+  const tFeedback = useTranslations('feedback');
   const router = useRouter();
   const { data: session, update: updateSession } = useSession();
+  const user = session?.user;
+  const [avatarPending, startAvatarTransition] = useTransition();
 
-  const handleProfileSubmit = async (values: ProfileFormData) => {
-    setLoading(true);
-    try {
-      const updatedUser = await putRequest('/administrations/profile', {
-        ...values,
-        avatar: avatarUrl,
-      });
+  if (!user) return null;
 
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+
+  const profileSchema = profileUpdateSchema as unknown as z.ZodType<ProfileUpdateInput>;
+  const profileDefaults: ProfileUpdateInput = {
+    firstName: user.firstName ?? '',
+    lastName: user.lastName ?? '',
+    phone: user.phone ?? '',
+  };
+
+  const submitProfile = async (values: ProfileUpdateInput) => {
+    const result = await updateProfileAction(values);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    await updateSession({
+      ...session,
+      user: {
+        ...user,
+        firstName: values.firstName ?? user.firstName,
+        lastName: values.lastName ?? user.lastName,
+        phone: values.phone ?? user.phone,
+      },
+    });
+    toast.success(tFeedback('profileUpdated'));
+    router.refresh();
+  };
+
+  const submitPassword = async (values: PasswordFormValues) => {
+    const result = await updateProfileAction({
+      currentPassword: values.currentPassword,
+      newPassword: values.newPassword,
+    });
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(tFeedback('passwordUpdated'));
+    router.refresh();
+  };
+
+  const handleAvatarChange = (uploadId: string | null, url: string | null) => {
+    startAvatarTransition(async () => {
+      const result = await setAvatarAction({ uploadId });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       await updateSession({
         ...session,
-        user: {
-          ...session?.user,
-          firstName: updatedUser.firstName,
-          lastName: updatedUser.lastName,
-          avatar: updatedUser.avatar,
-          phone: updatedUser.phone,
-        },
+        user: { ...user, avatar: url, avatarUploadId: uploadId },
       });
-
       router.refresh();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
-
-  const handlePasswordSubmit = async (values: PasswordFormData) => {
-    setLoading(true);
-    try {
-      await putRequest('/administrations/profile/password', {
-        currentPassword: values.currentPassword,
-        newPassword: values.newPassword,
-      });
-
-      router.refresh();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAvatarChange: UploadProps['onChange'] = async (
-    info: UploadChangeParam<UploadFile>
-  ) => {
-    if (info.file.status === 'done') {
-      setAvatarUrl(info.file.response.url);
-    }
-  };
-
-  if (!session?.user) {
-    return null;
-  }
 
   return (
-    <div className="max-w-[1000px] mx-auto p-6">
-      <Card>
-        <Row gutter={[24, 24]}>
-          {/* Sol Taraf - Avatar ve Temel Bilgiler */}
-          <Col xs={24} md={8}>
-            <div className="flex justify-center items-center  h-full">
-              <div className="text-center">
-                <Upload
-                  name="avatar"
-                  listType="picture-circle"
-                  showUploadList={false}
-                  action="/api/administrations/upload"
-                  onChange={handleAvatarChange}
-                >
-                  {avatarUrl || session.user.avatar ? (
-                    <Avatar size={120} src={avatarUrl || session.user.avatar} alt="avatar" />
-                  ) : (
-                    <div>
-                      <CameraOutlined className="text-2xl" />
-                      <div className="mt-2">Upload</div>
-                    </div>
-                  )}
-                </Upload>
-                <Title level={4} className="mt-4 mb-1">
-                  {session.user.firstName} {session.user.lastName}
-                </Title>
-                <Text type="secondary">{session.user.email}</Text>
-              </div>
-            </div>
-          </Col>
-
-          {/* Sağ Taraf - Tabs */}
-          <Col xs={24} md={16}>
-            <Tabs
-              defaultActiveKey="profile"
-              items={[
-                {
-                  key: 'profile',
-                  label: 'Profile Settings',
-                  children: (
-                    <Form
-                      layout="vertical"
-                      initialValues={{
-                        firstName: session.user.firstName || '',
-                        lastName: session.user.lastName || '',
-                        email: session.user.email,
-                        phone: session.user.phone || '',
-                      }}
-                      onFinish={handleProfileSubmit}
-                    >
-                      <Row gutter={16}>
-                        <Col xs={24} sm={12}>
-                          <Form.Item
-                            name="firstName"
-                            label="First Name"
-                            rules={[{ required: true, message: 'Please enter your first name' }]}
-                          >
-                            <Input prefix={<UserOutlined />} placeholder="First Name" />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                          <Form.Item
-                            name="lastName"
-                            label="Last Name"
-                            rules={[{ required: true, message: 'Please enter your last name' }]}
-                          >
-                            <Input prefix={<UserOutlined />} placeholder="Last Name" />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-
-                      <Form.Item name="email" label="Email">
-                        <Input prefix={<MailOutlined />} disabled />
-                      </Form.Item>
-
-                      <Form.Item
-                        name="phone"
-                        label="Phone Number"
-                        rules={[
-                          {
-                            pattern: /^[0-9+\-\s()]*$/,
-                            message: 'Please enter a valid phone number',
-                          },
-                        ]}
-                      >
-                        <Input prefix={<PhoneOutlined />} placeholder="Phone Number" />
-                      </Form.Item>
-
-                      <Form.Item>
-                        <Button
-                          type="primary"
-                          htmlType="submit"
-                          loading={loading}
-                          icon={<SaveOutlined />}
-                          size="large"
-                          block
-                        >
-                          Save Changes
-                        </Button>
-                      </Form.Item>
-                    </Form>
-                  ),
-                },
-                {
-                  key: 'password',
-                  label: 'Change Password',
-                  children: (
-                    <Form layout="vertical" onFinish={handlePasswordSubmit}>
-                      <Form.Item
-                        name="currentPassword"
-                        label="Current Password"
-                        rules={[{ required: true, message: 'Please enter your current password' }]}
-                      >
-                        <Input.Password prefix={<LockOutlined />} placeholder="Current Password" />
-                      </Form.Item>
-
-                      <Form.Item
-                        name="newPassword"
-                        label="New Password"
-                        rules={[
-                          { required: true, message: 'Please enter your new password' },
-                          { min: 8, message: 'Password must be at least 8 characters' },
-                        ]}
-                      >
-                        <Input.Password prefix={<LockOutlined />} placeholder="New Password" />
-                      </Form.Item>
-
-                      <Form.Item
-                        name="confirmPassword"
-                        label="Confirm Password"
-                        dependencies={['newPassword']}
-                        rules={[
-                          { required: true, message: 'Please confirm your new password' },
-                          ({ getFieldValue }) => ({
-                            validator(_, value) {
-                              if (!value || getFieldValue('newPassword') === value) {
-                                return Promise.resolve();
-                              }
-                              return Promise.reject(new Error('The two passwords do not match'));
-                            },
-                          }),
-                        ]}
-                      >
-                        <Input.Password prefix={<LockOutlined />} placeholder="Confirm Password" />
-                      </Form.Item>
-
-                      <Form.Item>
-                        <Button
-                          type="primary"
-                          htmlType="submit"
-                          loading={loading}
-                          icon={<LockOutlined />}
-                          size="large"
-                          block
-                        >
-                          Update Password
-                        </Button>
-                      </Form.Item>
-                    </Form>
-                  ),
-                },
-              ]}
+    <PageShell title={t('title')} description={t('description')}>
+      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+        <Card className="rounded-lg">
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
+            <AvatarUploader
+              currentUrl={user.avatar ?? undefined}
+              currentUploadId={user.avatarUploadId ?? undefined}
+              fallback={initials(fullName || user.email || '')}
+              disabled={avatarPending}
+              onUploaded={(upload) =>
+                handleAvatarChange(upload.id, upload.publicUrl ?? `/api/uploads/${upload.id}`)
+              }
+              onRemoved={() => handleAvatarChange(null, null)}
             />
-          </Col>
-        </Row>
-      </Card>
-    </div>
+            <h2 className="mt-2 text-lg font-semibold">{fullName || user.email}</h2>
+            <p className="text-sm text-muted-foreground">{user.email}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>{t('title')}</CardTitle>
+            <CardDescription>{t('description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="profile">
+              <TabsList>
+                <TabsTrigger value="profile">{t('title')}</TabsTrigger>
+                <TabsTrigger value="password">{t('passwordSection')}</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="profile" className="mt-5">
+                <Form<ProfileUpdateInput>
+                  schema={profileSchema}
+                  defaultValues={profileDefaults as never}
+                  values={profileDefaults as never}
+                  onSubmit={submitProfile}
+                >
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormInput name="firstName" label={tAuth('firstNameLabel')} />
+                    <FormInput name="lastName" label={tAuth('lastNameLabel')} />
+                  </div>
+                  <FormInput name="phone" label={tAuth('phoneLabel')} />
+                  <SubmitButton>
+                    <SaveIcon />
+                    {tCommon('save')}
+                  </SubmitButton>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="password" className="mt-5">
+                <Form<PasswordFormValues>
+                  schema={passwordFormSchema as unknown as z.ZodType<PasswordFormValues>}
+                  defaultValues={{
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: '',
+                  }}
+                  onSubmit={submitPassword}
+                  resetOnSuccess
+                >
+                  <FormInput
+                    name="currentPassword"
+                    label={tAuth('currentPasswordLabel')}
+                    type="password"
+                    description={t('currentPasswordHint')}
+                  />
+                  <FormInput
+                    name="newPassword"
+                    label={tAuth('newPasswordLabel')}
+                    type="password"
+                    description={t('newPasswordHint')}
+                  />
+                  <FormInput
+                    name="confirmPassword"
+                    label={tAuth('confirmPasswordLabel')}
+                    type="password"
+                  />
+                  <SubmitButton>
+                    <LockIcon />
+                    {tCommon('update')}
+                  </SubmitButton>
+                </Form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    </PageShell>
   );
 }

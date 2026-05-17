@@ -1,124 +1,80 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, Typography, Table } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { getRequest } from '@/lib/apiClient';
-import { usePermission } from '@/lib/auth/client-permissions';
-
-const { Title } = Typography;
-
-interface SecurityLog {
-  id: string;
-  email: string;
-  ipAddress: string;
-  userAgent: string;
-  status: string;
-  type: string;
-  message: string;
-  createdAt: string;
-  user?: {
-    firstName: string;
-    lastName: string;
-  };
-}
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Card, CardContent } from '@/components/ui/card';
+import { DataGrid } from '@/components/data-grid';
+import { PageShell } from '@/components/layout';
+import { StatusBadge } from '@/components/app/status-badge';
+import { useSecurityLogs } from '@/lib/query';
+import { formatDate, truncate } from '@/lib/formatters';
+import type { SecurityLogListItem } from '@/lib/api/client';
 
 export default function SecurityLogsPage() {
-  const [logs, setLogs] = useState<SecurityLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const canViewLogs = usePermission('security_log', 'view');
+  const t = useTranslations('admin.securityLogs');
+  const { data: logs = [], isLoading } = useSecurityLogs();
 
-  useEffect(() => {
-    if (canViewLogs) {
-      fetchLogs();
-    }
-  }, [canViewLogs]);
-
-  const fetchLogs = async () => {
-    try {
-      const data = await getRequest<SecurityLog[]>('/administrations/security-logs');
-      setLogs(data);
-    } catch (error) {
-      console.error('Failed to fetch security logs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const columns: ColumnsType<SecurityLog> = [
-    {
-      title: 'Date',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date: string) => new Date(date).toLocaleString(),
-      width: 180,
-    },
-    {
-      title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
-      width: 120,
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status: string) => (
-        <span style={{ color: status === 'SUCCESS' ? '#52c41a' : '#ff4d4f' }}>{status}</span>
-      ),
-    },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-      width: 200,
-    },
-    {
-      title: 'User',
-      key: 'user',
-      width: 150,
-      render: (record: SecurityLog) =>
-        record.user ? `${record.user.firstName} ${record.user.lastName}` : '-',
-    },
-    {
-      title: 'IP Address',
-      dataIndex: 'ipAddress',
-      key: 'ipAddress',
-      width: 130,
-    },
-    {
-      title: 'Browser',
-      dataIndex: 'userAgent',
-      key: 'userAgent',
-      ellipsis: true,
-    },
-    {
-      title: 'Message',
-      dataIndex: 'message',
-      key: 'message',
-      ellipsis: true,
-    },
-  ];
-
-  if (!canViewLogs) {
-    return null;
-  }
+  const columns = useMemo<ColumnDef<SecurityLogListItem>[]>(
+    () => [
+      {
+        id: 'createdAt',
+        header: t('columns.createdAt'),
+        cell: ({ row }) => formatDate(row.original.createdAt, 'PPpp'),
+      },
+      {
+        id: 'email',
+        header: t('columns.email'),
+        accessorKey: 'email',
+        cell: ({ row }) => <span className="font-medium">{row.original.email || '—'}</span>,
+      },
+      {
+        id: 'type',
+        header: t('columns.type'),
+        accessorKey: 'type',
+      },
+      {
+        id: 'status',
+        header: t('columns.status'),
+        accessorKey: 'status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'message',
+        header: t('columns.message'),
+        cell: ({ row }) => (
+          <span className="block max-w-sm truncate">{truncate(row.original.message, 120)}</span>
+        ),
+      },
+      {
+        id: 'ip',
+        header: t('columns.ip'),
+        accessorKey: 'ipAddress',
+      },
+      {
+        id: 'userAgent',
+        header: t('columns.userAgent'),
+        cell: ({ row }) => truncate(row.original.userAgent, 60),
+      },
+    ],
+    [t]
+  );
 
   return (
-    <Card>
-      <Title level={2}>Security Logs</Title>
-      <Table
-        columns={columns}
-        dataSource={logs}
-        loading={loading}
-        rowKey="id"
-        pagination={{
-          defaultPageSize: 20,
-          showSizeChanger: true,
-          showTotal: (total) => `Total ${total} records`,
-        }}
-      />
-    </Card>
+    <PageShell title={t('title')} description={t('description')}>
+      <Card className="rounded-lg">
+        <CardContent className="p-4">
+          <DataGrid<SecurityLogListItem>
+            data={logs}
+            columns={columns}
+            loading={isLoading}
+            columnVisibilityStorageKey="admin-security-logs"
+            exportFileName="security-logs"
+            initialPageSize={20}
+            toolbar={{ search: true, columnVisibility: true, exportable: true }}
+          />
+        </CardContent>
+      </Card>
+    </PageShell>
   );
 }

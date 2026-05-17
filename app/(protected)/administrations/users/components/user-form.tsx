@@ -1,166 +1,106 @@
 'use client';
 
-import { Form, Input, Select, Button } from 'antd';
-import { User, UserStatus } from '@/knex/types';
-import { useEffect, useState } from 'react';
-import { getRequest } from '@/lib/apiClient';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
+import {
+  Form,
+  FormInput,
+  FormMultiSelect,
+  FormSelect,
+  SubmitButton,
+} from '@/components/forms';
+import { Spinner } from '@/components/feedback';
+import { createUserSchema, updateUserSchema } from '@/lib/validation/admin';
+import { useRoles } from '@/lib/query';
+import { UserStatus } from '@/db/types';
+import type { CreateUserInput, UpdateUserInput, UserWithoutPassword } from '@/lib/api/client';
 
-type UserFormData = Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'emailVerified' | 'avatar'> & {
-  roleIds?: string[];
-};
+export type UserFormValues = CreateUserInput | UpdateUserInput;
 
-interface UserRole {
-  role: {
-    id: string;
-    name: string;
-    description: string;
-  };
+export interface UserFormProps {
+  initialValues?: UserWithoutPassword;
+  onSubmit: (values: UserFormValues) => Promise<void>;
 }
 
-interface UserWithRoles extends Partial<UserFormData> {
-  userRoles?: UserRole[];
-}
+export function UserForm({ initialValues, onSubmit }: UserFormProps) {
+  const tUsers = useTranslations('admin.users');
+  const tAuth = useTranslations('auth');
+  const tStatus = useTranslations('status');
+  const tCommon = useTranslations('common');
 
-interface UserFormProps {
-  initialValues?: UserWithRoles;
-  onSubmit: (values: UserFormData) => Promise<void>;
-  loading: boolean;
-}
+  const { data: roles = [], isLoading: rolesLoading } = useRoles();
+  const isEdit = Boolean(initialValues);
+  const schema = (isEdit ? updateUserSchema : createUserSchema) as unknown as z.ZodType<UserFormValues>;
 
-interface Role {
-  id: string;
-  name: string;
-  description: string;
-  isDefault: boolean;
-}
-
-export function UserForm({ initialValues, onSubmit, loading }: UserFormProps) {
-  const [form] = Form.useForm();
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loadingRoles, setLoadingRoles] = useState(false);
-
-  useEffect(() => {
-    form.resetFields();
+  const defaultValues = useMemo<UserFormValues>(() => {
+    const defaultRoleId = roles.find((role) => role.isDefault)?.id;
     if (initialValues) {
-      if (initialValues.userRoles) {
-        const roleIds = initialValues.userRoles.map((ur: any) => ur.role.id);
-        form.setFieldsValue({
-          ...initialValues,
-          roleIds,
-        });
-      } else {
-        form.setFieldsValue(initialValues);
-      }
+      return {
+        email: initialValues.email,
+        password: '',
+        firstName: initialValues.firstName,
+        lastName: initialValues.lastName,
+        phone: initialValues.phone,
+        status: initialValues.status,
+        roleIds: initialValues.userRoles?.map((ur) => ur.role.id) ?? [],
+      } as UserFormValues;
     }
-  }, [form, initialValues]);
-
-  useEffect(() => {
-    const fetchRoles = async () => {
-      setLoadingRoles(true);
-      try {
-        const data = await getRequest<Role[]>('/administrations/roles');
-        setRoles(data);
-
-        if (!initialValues) {
-          const defaultRole = data.find((role) => role.isDefault);
-          if (defaultRole) {
-            form.setFieldsValue({
-              roleIds: [defaultRole.id],
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching roles:', error);
-      } finally {
-        setLoadingRoles(false);
-      }
-    };
-
-    fetchRoles();
-  }, [form, initialValues]);
+    return {
+      email: '',
+      password: '',
+      firstName: null,
+      lastName: null,
+      phone: null,
+      status: UserStatus.ACTIVE,
+      roleIds: defaultRoleId ? [defaultRoleId] : [],
+    } as UserFormValues;
+  }, [initialValues, roles]);
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={onSubmit}
-      initialValues={{
-        roleIds: [],
-        status: UserStatus.ACTIVE,
-        ...initialValues,
-      }}
+    <Form<UserFormValues>
+      schema={schema}
+      defaultValues={defaultValues as never}
+      values={defaultValues as never}
+      onSubmit={onSubmit}
     >
-      <Form.Item
-        label="Email"
-        name="email"
-        rules={[
-          { required: true, message: 'Please input email' },
-          { type: 'email', message: 'Please enter a valid email' },
+      <FormInput name="email" label={tAuth('emailLabel')} type="email" autoComplete="email" />
+      <FormInput
+        name="password"
+        type="password"
+        label={isEdit ? tAuth('newPasswordLabel') : tAuth('passwordLabel')}
+        description={isEdit ? tUsers('passwordHint') : undefined}
+        autoComplete="new-password"
+      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormInput name="firstName" label={tAuth('firstNameLabel')} autoComplete="given-name" />
+        <FormInput name="lastName" label={tAuth('lastNameLabel')} autoComplete="family-name" />
+      </div>
+      <FormInput name="phone" label={tAuth('phoneLabel')} autoComplete="tel" />
+      <FormMultiSelect
+        name="roleIds"
+        label={tUsers('rolesLabel')}
+        options={roles.map((role) => ({
+          value: role.id,
+          label: role.name,
+          description: role.description ?? undefined,
+        }))}
+        emptyText={rolesLoading ? tUsers('loadingRoles') : tUsers('noRolesAvailable')}
+        disabled={rolesLoading}
+      />
+      {rolesLoading && <Spinner size={14} label={tCommon('loading')} />}
+      <FormSelect
+        name="status"
+        label={tCommon('status')}
+        options={[
+          { value: UserStatus.ACTIVE, label: tStatus('active') },
+          { value: UserStatus.INACTIVE, label: tStatus('inactive') },
+          { value: UserStatus.SUSPENDED, label: tStatus('suspended') },
         ]}
-      >
-        <Input />
-      </Form.Item>
-
-      {!initialValues && (
-        <Form.Item
-          label="Password"
-          name="password"
-          rules={[{ required: true, message: 'Please input password' }]}
-        >
-          <Input.Password />
-        </Form.Item>
-      )}
-
-      {initialValues && (
-        <Form.Item
-          label="New Password"
-          name="password"
-          extra="Leave blank to keep current password"
-        >
-          <Input.Password />
-        </Form.Item>
-      )}
-
-      <Form.Item label="First Name" name="firstName">
-        <Input />
-      </Form.Item>
-
-      <Form.Item label="Last Name" name="lastName">
-        <Input />
-      </Form.Item>
-
-      <Form.Item label="Phone" name="phone">
-        <Input />
-      </Form.Item>
-
-      <Form.Item label="Roles" name="roleIds">
-        <Select
-          mode="multiple"
-          placeholder="Select roles"
-          loading={loadingRoles}
-          optionFilterProp="children"
-        >
-          {roles.map((role) => (
-            <Select.Option key={role.id} value={role.id}>
-              {role.name}
-            </Select.Option>
-          ))}
-        </Select>
-      </Form.Item>
-
-      <Form.Item label="Status" name="status">
-        <Select>
-          <Select.Option value={UserStatus.ACTIVE}>Active</Select.Option>
-          <Select.Option value={UserStatus.INACTIVE}>Inactive</Select.Option>
-          <Select.Option value={UserStatus.SUSPENDED}>Suspended</Select.Option>
-        </Select>
-      </Form.Item>
-
-      <Form.Item>
-        <Button type="primary" htmlType="submit" loading={loading} block>
-          {initialValues ? 'Update User' : 'Create User'}
-        </Button>
-      </Form.Item>
+      />
+      <SubmitButton className="w-full">
+        {isEdit ? tCommon('update') : tCommon('create')}
+      </SubmitButton>
     </Form>
   );
 }

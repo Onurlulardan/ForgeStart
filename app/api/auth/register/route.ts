@@ -1,83 +1,91 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import knex from '@/knex';
+import { eq } from 'drizzle-orm';
+import { db } from '@/db';
+import { roles, userRoles, users } from '@/db/schema';
+import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
+import { logSecurityEvent } from '@/lib/auth/session-data';
+import { sendVerificationEmail } from '@/lib/auth/email-verification';
+import { requireRateLimit } from '@/lib/rate-limit/middleware';
+import { registerSchema } from '@/lib/validation/admin';
 
-export async function POST(req: Request) {
+function getAppUrl(request: Request) {
+  return process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? new URL(request.url).origin;
+}
+
+export async function POST(request: Request) {
   try {
-    const { email, password, firstName, lastName, phone } = await req.json();
+    const rate = await requireRateLimit({ preset: 'authRegister', request });
+    if (!rate.ok) return rate.response;
 
-    // Check if user already exists
-    const existingUser = await knex('User')
-      .where({ email })
-      .first();
+    const parsed = await parseJson(request, registerSchema);
+    if (!parsed.ok) return parsed.response;
+
+    const [existingUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, parsed.data.email))
+      .limit(1);
 
     if (existingUser) {
-      return new NextResponse('Email already exists', { status: 400 });
+      return jsonError('Email already exists', 409);
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
-    // Use a transaction for creating user and assigning default role
-    const result = await knex.transaction(async (trx) => {
-      // 1. Create the user
-      const insertResult = await trx('User')
-        .insert({
-          id: trx.raw('uuid_generate_v4()'),
-          email,
-          password: hashedPassword,
-          firstName,
-          lastName,
-          phone,
-          status: 'ACTIVE', // Default status
-          createdAt: trx.fn.now(),
-          updatedAt: trx.fn.now()
+    const result = await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({
+          email: parsed.data.email,
+          passwordHash,
+          firstName: parsed.data.firstName,
+          lastName: parsed.data.lastName,
+          phone: parsed.data.phone,
+          status: 'ACTIVE',
+          name: [parsed.data.firstName, parsed.data.lastName].filter(Boolean).join(' ') || null,
         })
-        .returning('id');
-      
-      // Extract the user ID as a string
-      const userId = insertResult[0].id;
+        .returning();
 
-      // 2. Find default role
-      const defaultRole = await trx('Role')
-        .where({ isDefault: true })
-        .first();
+      const [defaultRole] = await tx.select().from(roles).where(eq(roles.isDefault, true)).limit(1);
 
-      // 3. If default role exists, assign it to the user
       if (defaultRole) {
-        await trx('UserRole')
-          .insert({
-            id: trx.raw('uuid_generate_v4()'),
-            userId: userId,
-            roleId: defaultRole.id,
-            createdAt: trx.fn.now(),
-            updatedAt: trx.fn.now()
-          });
+        await tx.insert(userRoles).values({ userId: user.id, roleId: defaultRole.id });
       }
-
-      // Get the created user
-      const user = await trx('User')
-        .where({ id: userId })
-        .first();
 
       return { user, defaultRole };
     });
 
-    return NextResponse.json({
-      user: {
-        email: result.user.email,
-        firstName: result.user.firstName,
-        lastName: result.user.lastName,
-      },
-      role: result.defaultRole
-        ? {
-            name: result.defaultRole.name,
-            isDefault: result.defaultRole.isDefault,
-          }
-        : null,
+    await logSecurityEvent({
+      userId: result.user.id,
+      email: result.user.email,
+      status: 'SUCCESS',
+      type: 'REGISTER',
+      message: `User registered: ${result.user.email}`,
+      request,
     });
+
+    sendVerificationEmail(result.user, getAppUrl(request)).catch((err) => {
+      console.error('[REGISTER_VERIFY_EMAIL]', err);
+    });
+
+    return NextResponse.json(
+      {
+        user: {
+          email: result.user.email,
+          firstName: result.user.firstName,
+          lastName: result.user.lastName,
+        },
+        role: result.defaultRole
+          ? {
+              name: result.defaultRole.name,
+              isDefault: result.defaultRole.isDefault,
+            }
+          : null,
+      },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error('Registration error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return handleRouteError('[REGISTER_POST]', error);
   }
 }

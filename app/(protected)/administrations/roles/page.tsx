@@ -1,228 +1,143 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, Button, Tag, Typography, Dropdown, MenuProps, Drawer, Modal } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
-import { usePermission } from '@/lib/auth/client-permissions';
-import { DataGrid } from '@/core/components/datagrid';
-import { Role } from '@/knex/types';
+import { useMemo } from 'react';
+import { EditIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { DataGrid } from '@/components/data-grid';
+import { PageShell, CrudSheet } from '@/components/layout';
+import { PermissionButton } from '@/components/permission';
+import { useCrudResource } from '@/lib/hooks';
+import { useRoles, useRoleMutations } from '@/lib/query';
+import type { RoleInput, RoleWithCount } from '@/lib/api/client';
 import { RoleForm } from './components/role-form';
-import { getRequest, postRequest, putRequest, deleteRequest } from '@/lib/apiClient';
-
-const { Title } = Typography;
-
-interface RoleWithRelations extends Role {
-  organization?: {
-    id: string;
-    name: string;
-    slug: string;
-  } | null;
-  _count?: {
-    userRoles: number;
-  };
-}
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState<RoleWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<RoleWithRelations | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState<RoleWithRelations | null>(null);
-  const router = useRouter();
+  const t = useTranslations('admin.roles');
+  const tCommon = useTranslations('common');
+  const { data: roles = [], isLoading } = useRoles();
+  const mutations = useRoleMutations();
 
-  // Permission hooks
-  const canCreate = usePermission('role', 'create');
-  const canEdit = usePermission('role', 'edit');
-  const canDelete = usePermission('role', 'delete');
+  const crud = useCrudResource<RoleWithCount>({
+    resource: 'role',
+    onDelete: async (role) => {
+      await mutations.remove.mutateAsync(role.id);
+    },
+    deleteConfirm: {
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
+    },
+  });
 
-  useEffect(() => {
-    fetchRoles();
-  }, []);
-
-  const fetchRoles = async () => {
-    try {
-      const data = await getRequest<RoleWithRelations[]>('/administrations/roles');
-      setRoles(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+  const submit = async (values: RoleInput) => {
+    if (crud.selected) {
+      await mutations.update.mutateAsync({ id: crud.selected.id, data: values });
+    } else {
+      await mutations.create.mutateAsync(values);
     }
+    crud.closeForm();
   };
 
-  const handleDelete = async () => {
-    if (!roleToDelete) return;
-
-    try {
-      await deleteRequest(`/administrations/roles/${roleToDelete.id}`);
-      setDeleteModalVisible(false);
-      setRoleToDelete(null);
-      fetchRoles();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleSubmit = async (values: any) => {
-    setFormLoading(true);
-    try {
-      const endpoint = selectedRole
-        ? `/administrations/roles/${selectedRole.id}`
-        : '/administrations/roles';
-
-      if (selectedRole) {
-        await putRequest(endpoint, values);
-      } else {
-        await postRequest(endpoint, values);
-      }
-
-      setDrawerVisible(false);
-      setSelectedRole(null);
-      fetchRoles();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const columns = [
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 100,
-      render: (text: string, record: RoleWithRelations) => {
-        const items: MenuProps['items'] = [
-          {
-            key: 'edit',
-            icon: <EditOutlined />,
-            label: 'Edit',
-            disabled: !canEdit,
-            onClick: () => {
-              setSelectedRole(record);
-              setDrawerVisible(true);
-            },
-          },
-          {
-            key: 'delete',
-            icon: <DeleteOutlined />,
-            label: 'Delete',
-            disabled: !canDelete,
-            danger: true,
-            onClick: () => {
-              setRoleToDelete(record);
-              setDeleteModalVisible(true);
-            },
-          },
-        ];
-
-        return (
-          <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        );
+  const columns = useMemo<ColumnDef<RoleWithCount>[]>(
+    () => [
+      {
+        id: 'name',
+        header: t('columns.name'),
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">{row.original.name}</div>
+            <div className="max-w-md truncate text-xs text-muted-foreground">
+              {row.original.description || tCommon('noData')}
+            </div>
+          </div>
+        ),
       },
-    },
-    {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-      sorter: (a: RoleWithRelations, b: RoleWithRelations) => a.name.localeCompare(b.name),
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-    },
-    {
-      title: 'Organization',
-      key: 'organization',
-      render: (text: string, record: RoleWithRelations) => record.organization?.name || 'Global',
-    },
-    {
-      title: 'Default',
-      dataIndex: 'isDefault',
-      key: 'isDefault',
-      render: (isDefault: boolean) => (isDefault ? <Tag color="blue">Default</Tag> : null),
-    },
-    {
-      title: 'Users',
-      key: 'userRoles',
-      render: (text: string, record: RoleWithRelations) => record._count?.userRoles || 0,
-    },
-  ];
+      {
+        id: 'scope',
+        header: t('columns.scope'),
+        cell: ({ row }) =>
+          row.original.organizationId ? t('scopeOrganization') : t('scopeGlobal'),
+      },
+      {
+        id: 'isDefault',
+        header: t('isDefault'),
+        accessorKey: 'isDefault',
+        cell: ({ row }) =>
+          row.original.isDefault ? (
+            <Badge variant="secondary" className="rounded-md">
+              {t('isDefault')}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
+      {
+        id: 'users',
+        header: t('columns.users'),
+        cell: ({ row }) => row.original._count?.users ?? 0,
+      },
+    ],
+    [t, tCommon]
+  );
 
   return (
-    <div className="p-8">
-      <Card>
-        <div className="flex justify-between items-center mb-4">
-          <Title level={3} className="!mb-0">
-            Roles
-          </Title>
-          {canCreate && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setSelectedRole(null);
-                setDrawerVisible(true);
-              }}
-            >
-              Create Role
-            </Button>
-          )}
-        </div>
-
-        <DataGrid<RoleWithRelations>
-          columns={columns}
-          dataSource={roles}
-          loading={loading}
-          rowKey="id"
-          onRowDoubleClick={
-            canEdit
-              ? (record) => {
-                  setSelectedRole(record);
-                  setDrawerVisible(true);
-                }
-              : undefined
-          }
-        />
+    <PageShell
+      title={t('title')}
+      description={t('description')}
+      actions={
+        <PermissionButton resource="role" action="create" onClick={crud.openCreate}>
+          <PlusIcon />
+          {t('createButton')}
+        </PermissionButton>
+      }
+    >
+      <Card className="rounded-lg">
+        <CardContent className="p-4">
+          <DataGrid<RoleWithCount>
+            data={roles}
+            columns={columns}
+            loading={isLoading}
+            columnVisibilityStorageKey="admin-roles"
+            exportFileName="roles"
+            toolbar={{ search: true, columnVisibility: true, exportable: true }}
+            rowActions={() => [
+              {
+                label: tCommon('edit'),
+                icon: <EditIcon />,
+                disabled: () => !crud.permissions.canEdit,
+                onSelect: crud.openEdit,
+              },
+              {
+                label: tCommon('delete'),
+                icon: <Trash2Icon />,
+                destructive: true,
+                disabled: () => !crud.permissions.canDelete,
+                onSelect: (record) => {
+                  void crud.confirmDelete(record);
+                },
+              },
+            ]}
+            onRowDoubleClick={crud.permissions.canEdit ? crud.openEdit : undefined}
+          />
+        </CardContent>
       </Card>
 
-      <Drawer
-        title={`${selectedRole ? 'Edit' : 'Create'} Role`}
-        width={720}
-        onClose={() => {
-          setDrawerVisible(false);
-          setSelectedRole(null);
+      <CrudSheet
+        open={crud.isFormOpen}
+        onOpenChange={(open) => {
+          if (!open) crud.closeForm();
         }}
-        open={drawerVisible}
-        style={{ paddingBottom: 80 }}
+        title={crud.selected ? t('editTitle') : t('createTitle')}
+        description={crud.selected ? t('editDescription') : t('createDescription')}
       >
-        <RoleForm initialValues={selectedRole} onSubmit={handleSubmit} loading={formLoading} />
-      </Drawer>
-
-      <Modal
-        title="Delete Role"
-        open={deleteModalVisible}
-        onOk={handleDelete}
-        onCancel={() => {
-          setDeleteModalVisible(false);
-          setRoleToDelete(null);
-        }}
-        okText="Delete"
-        okButtonProps={{
-          danger: true,
-          loading: formLoading,
-        }}
-      >
-        <p>Are you sure you want to delete this role?</p>
-        <p>This action cannot be undone.</p>
-      </Modal>
-    </div>
+        <RoleForm
+          key={crud.selected?.id ?? 'new'}
+          initialValues={crud.selected}
+          onSubmit={submit}
+        />
+      </CrudSheet>
+    </PageShell>
   );
 }

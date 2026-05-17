@@ -1,68 +1,43 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Form, Input, Button, Space } from 'antd';
-import { Action } from '@/knex/types';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
+import { Form, FormInput, FormTextarea, SubmitButton } from '@/components/forms';
+import { actionSchema } from '@/lib/validation/admin';
+import type { Action, ActionInput } from '@/lib/api/client';
 
-interface ActionFormProps {
+export interface ActionFormProps {
   initialValues?: Action | null;
-  onSubmit: (values: any) => Promise<void>;
-  loading?: boolean;
+  onSubmit: (values: ActionInput) => Promise<void>;
 }
 
-export function ActionForm({ initialValues, onSubmit, loading }: ActionFormProps) {
-  const [form] = Form.useForm();
+export function ActionForm({ initialValues, onSubmit }: ActionFormProps) {
+  const tCommon = useTranslations('common');
+  const schema = actionSchema as unknown as z.ZodType<ActionInput>;
 
-  useEffect(() => {
-    form.resetFields();
-    if (initialValues) {
-      form.setFieldsValue({
-        name: initialValues.name,
-        slug: initialValues.slug,
-        description: initialValues.description,
-      });
-    }
-  }, [form, initialValues]);
+  const defaultValues = useMemo<ActionInput>(
+    () => ({
+      name: initialValues?.name ?? '',
+      slug: initialValues?.slug ?? '',
+      description: initialValues?.description ?? null,
+    }),
+    [initialValues]
+  );
 
   return (
-    <Form form={form} layout="vertical" onFinish={onSubmit}>
-      <Form.Item
-        name="name"
-        label="Action Name"
-        rules={[
-          { required: true, message: 'Please enter action name' },
-          { min: 3, message: 'Action name must be at least 3 characters' },
-        ]}
-      >
-        <Input placeholder="Enter action name (e.g., VIEW, CREATE)" />
-      </Form.Item>
-
-      <Form.Item
-        name="slug"
-        label="Slug"
-        rules={[
-          { required: true, message: 'Please enter slug' },
-          {
-            pattern: /^[a-z0-9-]+$/,
-            message: 'Slug can only contain lowercase letters, numbers, and hyphens',
-          },
-        ]}
-      >
-        <Input placeholder="Enter slug (e.g., view, create)" />
-      </Form.Item>
-
-      <Form.Item name="description" label="Description">
-        <Input.TextArea rows={4} placeholder="Enter action description" />
-      </Form.Item>
-
-      <Form.Item className="mb-0">
-        <Space className="w-full justify-end">
-          <Button onClick={() => form.resetFields()}>Reset</Button>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            {initialValues ? 'Update' : 'Create'} Action
-          </Button>
-        </Space>
-      </Form.Item>
+    <Form<ActionInput>
+      schema={schema}
+      defaultValues={defaultValues as never}
+      values={defaultValues as never}
+      onSubmit={onSubmit}
+    >
+      <FormInput name="name" label={tCommon('name')} minLength={3} />
+      <FormInput name="slug" label={tCommon('slug')} pattern="^[a-z0-9-_]+$" />
+      <FormTextarea name="description" label={tCommon('description')} rows={4} />
+      <SubmitButton className="w-full">
+        {initialValues ? tCommon('update') : tCommon('create')}
+      </SubmitButton>
     </Form>
   );
 }

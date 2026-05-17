@@ -1,272 +1,147 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, Button, Tag, Typography, Dropdown, MenuProps, Drawer, Modal } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
-import { usePermission } from '@/lib/auth/client-permissions';
-import { DataGrid } from '@/core/components/datagrid';
-import { UserForm } from './components/user-form';
-import { User, UserStatus } from '@/knex/types';
-import { getRequest, postRequest, putRequest, deleteRequest } from '@/lib/apiClient';
-
-const { Title } = Typography;
-
-// Role Type Definition
-type Role = {
-  id: string;
-  name: string;
-  description: string;
-};
-
-// UserRole Type Definition
-type UserRole = {
-  role: Role;
-};
-
-// User Type Definition (without password)
-type UserWithoutPassword = Omit<User, 'password'> & {
-  userRoles?: UserRole[];
-};
+import { useMemo } from 'react';
+import { EditIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { DataGrid } from '@/components/data-grid';
+import { PageShell, CrudSheet } from '@/components/layout';
+import { PermissionButton } from '@/components/permission';
+import { StatusBadge } from '@/components/app/status-badge';
+import { useCrudResource } from '@/lib/hooks';
+import { useUsers, useUserMutations } from '@/lib/query';
+import type { UserWithoutPassword } from '@/lib/api/client';
+import { UserForm, type UserFormValues } from './components/user-form';
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<UserWithoutPassword[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserWithoutPassword | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<UserWithoutPassword | null>(null);
-  const router = useRouter();
+  const t = useTranslations('admin.users');
+  const tCommon = useTranslations('common');
+  const { data: users = [], isLoading } = useUsers();
+  const mutations = useUserMutations();
 
-  // Permission hooks
-  const canCreate = usePermission('user', 'create');
-  const canEdit = usePermission('user', 'edit');
-  const canDelete = usePermission('user', 'delete');
+  const crud = useCrudResource<UserWithoutPassword>({
+    resource: 'user',
+    onDelete: async (user) => {
+      await mutations.remove.mutateAsync(user.id);
+    },
+    deleteConfirm: {
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
+    },
+  });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const data = await getRequest<UserWithoutPassword[]>('/administrations/users');
-      setUsers(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+  const submit = async (values: UserFormValues) => {
+    if (crud.selected) {
+      await mutations.update.mutateAsync({ id: crud.selected.id, data: values });
+    } else {
+      await mutations.create.mutateAsync(values as never);
     }
+    crud.closeForm();
   };
 
-  const handleDelete = async () => {
-    if (!userToDelete) return;
-
-    try {
-      await deleteRequest(`/administrations/users/${userToDelete.id}`);
-      setDeleteModalVisible(false);
-      setUserToDelete(null);
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleSubmit = async (values: any) => {
-    setFormLoading(true);
-    try {
-      const endpoint = selectedUser
-        ? `/administrations/users/${selectedUser.id}`
-        : '/administrations/users';
-
-      if (selectedUser) {
-        await putRequest(endpoint, values);
-      } else {
-        await postRequest(endpoint, values);
-      }
-
-      setDrawerVisible(false);
-      setSelectedUser(null);
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const columns = [
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 100,
-      render: (record: UserWithoutPassword) => {
-        const menuItems: MenuProps['items'] = [];
-
-        if (canEdit) {
-          menuItems.push({
-            key: 'edit',
-            label: 'Edit',
-            icon: <EditOutlined />,
-            onClick: () => {
-              setSelectedUser(record);
-              setDrawerVisible(true);
-            },
-          });
-        }
-
-        if (canDelete) {
-          menuItems.push({
-            key: 'delete',
-            label: 'Delete',
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              setUserToDelete(record);
-              setDeleteModalVisible(true);
-            },
-          });
-        }
-
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        );
+  const columns = useMemo<ColumnDef<UserWithoutPassword>[]>(
+    () => [
+      {
+        id: 'name',
+        header: t('columns.name'),
+        cell: ({ row }) => {
+          const record = row.original;
+          const name = [record.firstName, record.lastName].filter(Boolean).join(' ');
+          return (
+            <div>
+              <div className="font-medium">{name || record.email}</div>
+              <div className="text-xs text-muted-foreground">{record.email}</div>
+            </div>
+          );
+        },
       },
-    },
-    {
-      title: 'Name',
-      key: 'name',
-      render: (record: UserWithoutPassword) => (
-        <span>
-          {record.firstName && record.lastName
-            ? `${record.firstName} ${record.lastName}`
-            : record.email}
-        </span>
-      ),
-    },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-    },
-    {
-      title: 'Roles',
-      key: 'roles',
-      render: (record: UserWithoutPassword) => (
-        <>
-          {record.userRoles && record.userRoles.length > 0 ? (
-            record.userRoles.map((userRole, index) => (
-              <Tag
-                key={index}
-                color={userRole.role.name === 'ADMIN' ? 'blue' : 'green'}
-                style={{ marginRight: 4, marginBottom: 4 }}
-              >
-                {userRole.role.name}
-              </Tag>
-            ))
-          ) : (
-            <Tag>No Role</Tag>
-          )}
-        </>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: UserStatus) => (
-        <Tag color={status === 'ACTIVE' ? 'green' : 'red'}>{status}</Tag>
-      ),
-    },
-  ];
-
-  const headerContent = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-      <Title level={2}>Users</Title>
-      {canCreate && (
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setSelectedUser(null);
-            setDrawerVisible(true);
-          }}
-        >
-          Create User
-        </Button>
-      )}
-    </div>
+      {
+        id: 'roles',
+        header: t('columns.roles'),
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.userRoles?.length ? (
+              row.original.userRoles.map((userRole) => (
+                <Badge key={userRole.role.id} variant="secondary" className="rounded-md">
+                  {userRole.role.name}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="outline" className="rounded-md">
+                {t('noRole')}
+              </Badge>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        header: t('columns.status'),
+        accessorKey: 'status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+    ],
+    [t]
   );
 
   return (
-    <>
-      <Card>
-        <DataGrid<UserWithoutPassword>
-          columns={columns}
-          dataSource={users}
-          rowKey="id"
-          loading={loading}
-          headerContent={headerContent}
-          onRowDoubleClick={
-            canEdit
-              ? (record) => {
-                  setSelectedUser(record);
-                  setDrawerVisible(true);
-                }
-              : undefined
-          }
-        />
+    <PageShell
+      title={t('title')}
+      description={t('description')}
+      actions={
+        <PermissionButton resource="user" action="create" onClick={crud.openCreate}>
+          <PlusIcon />
+          {t('createButton')}
+        </PermissionButton>
+      }
+    >
+      <Card className="rounded-lg">
+        <CardContent className="p-4">
+          <DataGrid<UserWithoutPassword>
+            data={users}
+            columns={columns}
+            loading={isLoading}
+            columnVisibilityStorageKey="admin-users"
+            exportFileName="users"
+            toolbar={{ search: true, columnVisibility: true, exportable: true }}
+            rowActions={() => [
+              {
+                label: tCommon('edit'),
+                icon: <EditIcon />,
+                disabled: () => !crud.permissions.canEdit,
+                onSelect: crud.openEdit,
+              },
+              {
+                label: tCommon('delete'),
+                icon: <Trash2Icon />,
+                destructive: true,
+                disabled: () => !crud.permissions.canDelete,
+                onSelect: (record) => {
+                  void crud.confirmDelete(record);
+                },
+              },
+            ]}
+            onRowDoubleClick={crud.permissions.canEdit ? crud.openEdit : undefined}
+          />
+        </CardContent>
       </Card>
 
-      <Drawer
-        title={selectedUser ? 'Edit User' : 'Create User'}
-        open={drawerVisible}
-        onClose={() => {
-          setDrawerVisible(false);
-          setSelectedUser(null);
+      <CrudSheet
+        open={crud.isFormOpen}
+        onOpenChange={(open) => {
+          if (!open) crud.closeForm();
         }}
-        width={720}
+        title={crud.selected ? t('editTitle') : t('createTitle')}
+        description={crud.selected ? t('editDescription') : t('createDescription')}
       >
         <UserForm
-          initialValues={
-            selectedUser
-              ? {
-                  ...selectedUser,
-                  userRoles: selectedUser.userRoles,
-                }
-              : undefined
-          }
-          onSubmit={handleSubmit}
-          loading={formLoading}
+          key={crud.selected?.id ?? 'new'}
+          initialValues={crud.selected ?? undefined}
+          onSubmit={submit}
         />
-      </Drawer>
-
-      <Modal
-        title="Delete User"
-        open={deleteModalVisible}
-        onOk={handleDelete}
-        onCancel={() => {
-          setDeleteModalVisible(false);
-          setUserToDelete(null);
-        }}
-        okText="Delete"
-        cancelText="Cancel"
-        okButtonProps={{ danger: true }}
-        centered
-      >
-        <p>Are you sure you want to delete this user?</p>
-        {userToDelete && (
-          <p>
-            <strong>
-              {userToDelete.firstName && userToDelete.lastName
-                ? `${userToDelete.firstName} ${userToDelete.lastName}`
-                : userToDelete.email}
-            </strong>
-          </p>
-        )}
-      </Modal>
-    </>
+      </CrudSheet>
+    </PageShell>
   );
 }

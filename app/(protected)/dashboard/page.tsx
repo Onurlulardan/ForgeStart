@@ -1,89 +1,128 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Typography, Button } from 'antd';
+import {
+  ArrowRightIcon,
+  Building2Icon,
+  DatabaseIcon,
+  GitCommitIcon,
+  ShieldCheckIcon,
+  UsersIcon,
+} from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useSession } from 'next-auth/react';
-import { usePermission } from '@/lib/auth/client-permissions';
-import Link from 'next/link';
-import { ArrowRightOutlined } from '@ant-design/icons';
-import { getRequest } from '@/lib/apiClient';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PageShell } from '@/components/layout';
+import { Link } from '@/i18n/navigation';
+import { useDashboardStats, useHealthStatus } from '@/lib/query';
 
-const { Title, Text } = Typography;
-
-interface DashboardStats {
-  totalOrganizations: number;
-  totalUsers: number;
-  activeUsers: number;
-}
-
-export default function Dashboard() {
+export default function DashboardPage() {
+  const t = useTranslations('dashboard');
+  const tNav = useTranslations('nav');
   const { data: session } = useSession();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalOrganizations: 0,
-    totalUsers: 0,
-    activeUsers: 0,
-  });
+  const { data: stats, isLoading } = useDashboardStats();
+  const { data: health } = useHealthStatus();
 
-  // Permission hooks
-  const canViewStats = usePermission('dashboard', 'view');
+  const name = [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ');
 
-  const fetchDashboardData = async () => {
-    if (canViewStats) {
-      try {
-        const data = await getRequest<DashboardStats>('/dashboard/stats');
-        setStats(data);
-      } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, [canViewStats]);
+  const statMeta = [
+    {
+      key: 'totalOrganizations',
+      label: t('totalOrganizations'),
+      icon: Building2Icon,
+      value: stats?.totalOrganizations ?? 0,
+    },
+    {
+      key: 'totalUsers',
+      label: t('totalUsers'),
+      icon: UsersIcon,
+      value: stats?.totalUsers ?? 0,
+    },
+    {
+      key: 'activeUsers',
+      label: t('activeUsers'),
+      icon: ShieldCheckIcon,
+      value: stats?.activeUsers ?? 0,
+    },
+  ];
 
   return (
-    <div className="flex items-center justify-center p-4 h-full">
-      <Card className="w-full text-center">
-        <Title level={2}>Welcome to NextJS Starter Template</Title>
-        <Text className="block mb-8 text-lg">A modern and scalable system for your business</Text>
+    <PageShell
+      title={`${t('title')}${name ? `, ${name}` : ''}`}
+      description={t('description')}
+      actions={
+        <Button render={<Link href="/administrations" />}>
+          {tNav('administration')}
+          <ArrowRightIcon />
+        </Button>
+      }
+    >
+      <section className="grid gap-4 md:grid-cols-3">
+        {statMeta.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Card key={item.key} className="rounded-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardDescription>{item.label}</CardDescription>
+                    <CardTitle className="mt-2 text-3xl">
+                      {isLoading ? <Skeleton className="h-8 w-16" /> : item.value}
+                    </CardTitle>
+                  </div>
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                    <Icon className="size-5" />
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          );
+        })}
+      </section>
 
-        {session ? (
-          <div>
-            <Link href="/administrations">
-              <Button type="primary" size="large" icon={<ArrowRightOutlined />}>
-                Go to Administrations
-              </Button>
-            </Link>
-
-            {canViewStats && (
-              <Row gutter={16} className="mb-8 mt-8">
-                <Col span={8}>
-                  <Card>
-                    <Statistic title="Total Organizations" value={stats.totalOrganizations} />
-                  </Card>
-                </Col>
-                <Col span={8}>
-                  <Card>
-                    <Statistic title="Total Users" value={stats.totalUsers} />
-                  </Card>
-                </Col>
-                <Col span={8}>
-                  <Card>
-                    <Statistic title="Active Users" value={stats.activeUsers} />
-                  </Card>
-                </Col>
-              </Row>
-            )}
-          </div>
-        ) : (
-          <Link href="/auth/signin">
-            <Button type="primary" size="large" icon={<ArrowRightOutlined />}>
-              Sign In
-            </Button>
-          </Link>
-        )}
+      <Card className="rounded-lg">
+        <CardHeader>
+          <CardTitle>{t('runtimeHealth')}</CardTitle>
+          <CardDescription>{t('description')}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          {[
+            {
+              label: t('database'),
+              value: health?.database === 'connected' ? t('healthy') : t('unhealthy'),
+              icon: DatabaseIcon,
+            },
+            {
+              label: t('migrations'),
+              value: `${health?.migrations ?? 0}`,
+              icon: ShieldCheckIcon,
+            },
+            {
+              label: t('appVersion'),
+              value: health?.status ?? '—',
+              icon: GitCommitIcon,
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="rounded-lg border bg-background p-4 text-sm">
+                <div className="flex items-center gap-2 font-medium">
+                  <Icon />
+                  {item.label}
+                </div>
+                <p className="mt-2 truncate text-muted-foreground">{item.value}</p>
+              </div>
+            );
+          })}
+        </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }

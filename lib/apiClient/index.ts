@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { signOut } from 'next-auth/react';
 import axiosRetry from 'axios-retry';
+import { parseApiError } from '@/lib/api/errors';
 import { RequestOptions, ShowNotificationFunction } from './types/types';
 
 const axiosInstance = axios.create({
@@ -56,23 +57,41 @@ axiosInstance.interceptors.response.use(
       }
     }
 
-    const errorMessage = (error.response?.data as string) || error.message;
+    const parsed = parseApiError(error);
+    let errorMessage = parsed.message || 'An error occurred';
+
+    if (error.response?.status === 429) {
+      const retryAfter =
+        Number(error.response.headers?.['retry-after']) ||
+        (typeof (error.response.data as { retryAfter?: number })?.retryAfter === 'number'
+          ? (error.response.data as { retryAfter: number }).retryAfter
+          : null);
+      if (retryAfter && retryAfter > 0) {
+        errorMessage = `Too many requests. Retry in ${retryAfter}s.`;
+      } else {
+        errorMessage = 'Too many requests. Slow down and try again shortly.';
+      }
+    }
 
     if (typeof window !== 'undefined') {
       const showNotification = window.__showNotification as ShowNotificationFunction;
       const truncatedMessage =
         errorMessage.length > 500 ? errorMessage.slice(0, 497) + '...' : errorMessage;
-      showNotification?.('error', 'Error', truncatedMessage);
+      showNotification?.(
+        error.response?.status === 429 ? 'warning' : 'error',
+        error.response?.status === 429 ? 'Rate limited' : 'Error',
+        truncatedMessage
+      );
     }
 
     throw new Error(errorMessage);
   }
 );
 
-async function apiClient<T = any>(
+async function apiClient<T = unknown>(
   endpoint: string,
   method = 'GET',
-  data: any = null,
+  data: unknown = null,
   options: RequestOptions = {}
 ) {
   const { headers = {}, ...params } = options;
@@ -89,18 +108,26 @@ async function apiClient<T = any>(
 }
 
 // HTTP request methods
-export const getRequest = <T = any>(endpoint: string, options: RequestOptions = {}) => {
+export const getRequest = <T = unknown>(endpoint: string, options: RequestOptions = {}) => {
   return apiClient<T>(endpoint, 'GET', null, options);
 };
 
-export const postRequest = <T = any>(endpoint: string, data: any, options: RequestOptions = {}) => {
+export const postRequest = <T = unknown>(
+  endpoint: string,
+  data: unknown,
+  options: RequestOptions = {}
+) => {
   return apiClient<T>(endpoint, 'POST', data, options);
 };
 
-export const putRequest = <T = any>(endpoint: string, data: any, options: RequestOptions = {}) => {
+export const putRequest = <T = unknown>(
+  endpoint: string,
+  data: unknown,
+  options: RequestOptions = {}
+) => {
   return apiClient<T>(endpoint, 'PUT', data, options);
 };
 
-export const deleteRequest = <T = any>(endpoint: string, options: RequestOptions = {}) => {
+export const deleteRequest = <T = unknown>(endpoint: string, options: RequestOptions = {}) => {
   return apiClient<T>(endpoint, 'DELETE', null, options);
 };

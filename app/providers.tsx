@@ -1,11 +1,21 @@
 'use client';
 
-import { App, ConfigProvider, theme } from 'antd';
-import { createContext, useContext, useState, useEffect } from 'react';
-import baseTheme from '@/config/theme.json';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import { SessionProvider } from 'next-auth/react';
+import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { useNotificationSetup } from '@/hooks/useNotificationSetup';
-import { SessionProvider } from 'next-auth/react';
+import { ConfirmDialogProvider } from '@/components/layout/confirm-dialog-host';
+import { ErrorBoundary } from '@/components/feedback/error-boundary';
+import { getQueryClient } from '@/lib/query/client';
+import { ThemeCustomizerProvider } from '@/contexts/ThemeCustomizerContext';
+import { useRealtimeQueryInvalidator } from '@/lib/hooks';
+import type { ThemeTokens } from '@/lib/theme';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -21,46 +31,76 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
-function NotificationSetup({ children }: { children: React.ReactNode }) {
+function NotificationSetup({ children }: { children: ReactNode }) {
   useNotificationSetup();
   return <>{children}</>;
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(false);
+function RealtimeBridge({ children }: { children: ReactNode }) {
+  useRealtimeQueryInvalidator();
+  return <>{children}</>;
+}
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setIsDark(savedTheme === 'dark');
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDark(prefersDark);
-    }
-  }, []);
+interface ThemeBridgeProps {
+  children: ReactNode;
+  systemTheme: ThemeTokens | null;
+}
+
+function ThemeBridge({ children, systemTheme }: ThemeBridgeProps) {
+  const { resolvedTheme, setTheme } = useNextTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-  };
-
-  const themeConfig = {
-    ...baseTheme,
-    algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    setTheme(isDark ? 'light' : 'dark');
   };
 
   return (
-    <SessionProvider>
-      <ThemeContext.Provider value={{ isDark, toggleTheme }}>
-        <ConfigProvider theme={themeConfig}>
-          <App>
-            <NotificationProvider>
-              <NotificationSetup>{children}</NotificationSetup>
-            </NotificationProvider>
-          </App>
-        </ConfigProvider>
-      </ThemeContext.Provider>
-    </SessionProvider>
+    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+      <ThemeCustomizerProvider initialTokens={systemTheme ?? undefined}>
+        <TooltipProvider>
+          <NotificationProvider>
+            <ConfirmDialogProvider>
+              <NotificationSetup>
+                <ErrorBoundary>
+                  <RealtimeBridge>{children}</RealtimeBridge>
+                </ErrorBoundary>
+              </NotificationSetup>
+            </ConfirmDialogProvider>
+            <Toaster position="top-right" closeButton richColors />
+          </NotificationProvider>
+        </TooltipProvider>
+      </ThemeCustomizerProvider>
+    </ThemeContext.Provider>
+  );
+}
+
+interface ProvidersProps {
+  children: ReactNode;
+  locale: string;
+  messages: AbstractIntlMessages;
+  systemTheme: ThemeTokens | null;
+}
+
+export function Providers({ children, locale, messages, systemTheme }: ProvidersProps) {
+  const [queryClient] = useState(() => getQueryClient());
+
+  return (
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <SessionProvider>
+        <QueryClientProvider client={queryClient}>
+          <NextThemesProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ThemeBridge systemTheme={systemTheme}>{children}</ThemeBridge>
+          </NextThemesProvider>
+          {process.env.NODE_ENV === 'development' && (
+            <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
+          )}
+        </QueryClientProvider>
+      </SessionProvider>
+    </NextIntlClientProvider>
   );
 }

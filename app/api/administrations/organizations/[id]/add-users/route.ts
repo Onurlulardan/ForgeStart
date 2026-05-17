@@ -1,61 +1,54 @@
-import { NextResponse, NextRequest } from 'next/server';
-import knex from '@/knex';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { requirePermission } from '@/lib/auth/server-permissions';
+import { NextResponse } from 'next/server';
+import { and, eq, inArray } from 'drizzle-orm';
+import { db } from '@/db';
+import { organizationMembers, organizations } from '@/db/schema';
+import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
+import { requireApiPermission } from '@/lib/auth/server-permissions';
+import { addUsersToOrganizationSchema } from '@/lib/validation/admin';
 
-// POST /api/organizations/[id]/add-users
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const authz = await requireApiPermission('organization', 'edit');
+    if (!authz.ok) return authz.response;
 
-    await requirePermission('organization', 'update');
-
-    const { userIds } = await request.json();
     const { id } = await params;
-    const organizationId = id;
+    const parsed = await parseJson(request, addUsersToOrganizationSchema);
+    if (!parsed.ok) return parsed.response;
 
-    // Validate input
-    if (!userIds || !Array.isArray(userIds)) {
-      return new NextResponse('Invalid user IDs', { status: 400 });
+    const [organization] = await db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.id, id))
+      .limit(1);
+    if (!organization) return jsonError('Organization not found', 404);
+
+    const existingMembers = await db
+      .select({ userId: organizationMembers.userId })
+      .from(organizationMembers)
+      .where(
+        and(
+          eq(organizationMembers.organizationId, id),
+          inArray(organizationMembers.userId, parsed.data.userIds)
+        )
+      );
+
+    const existingUserIds = new Set(existingMembers.map((member) => member.userId));
+    const newUserIds = parsed.data.userIds.filter((userId) => !existingUserIds.has(userId));
+
+    if (!newUserIds.length) {
+      return jsonError('Selected users are already members of this organization', 400);
     }
 
-    // Get existing members
-    const existingMembers = await knex('OrganizationMember')
-      .where({ organizationId })
-      .whereIn('userId', userIds);
+    await db.insert(organizationMembers).values(
+      newUserIds.map((userId) => ({
+        organizationId: id,
+        userId,
+        roleId: parsed.data.roleId,
+      }))
+    );
 
-    const existingUserIds = existingMembers.map((member) => member.userId);
-    const newUserIds = userIds.filter((id) => !existingUserIds.includes(id));
-
-    // Add new members
-    let addedCount = 0;
-    if (newUserIds.length > 0) {
-      // Use transaction to ensure all inserts succeed or fail together
-      await knex.transaction(async (trx) => {
-        // Insert each new member
-        for (const userId of newUserIds) {
-          await trx('OrganizationMember').insert({
-            id: trx.raw('uuid_generate_v4()'),
-            organizationId,
-            userId,
-            createdAt: trx.fn.now(),
-            updatedAt: trx.fn.now()
-          });
-          addedCount++;
-        }
-      });
-    }
-
-    return NextResponse.json({
-      added: addedCount,
-      skipped: existingUserIds.length,
-    });
+    return NextResponse.json({ added: newUserIds.length }, { status: 201 });
   } catch (error) {
-    console.error('[ORGANIZATIONS_ADD_USERS_POST]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[ORGANIZATIONS_ADD_USERS_POST]', error);
   }
 }

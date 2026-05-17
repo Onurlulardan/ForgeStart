@@ -1,68 +1,43 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Form, Input, Button, Space } from 'antd';
-import { Resource } from '@/knex/types';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
+import { Form, FormInput, FormTextarea, SubmitButton } from '@/components/forms';
+import { resourceSchema } from '@/lib/validation/admin';
+import type { Resource, ResourceInput } from '@/lib/api/client';
 
-interface ResourceFormProps {
+export interface ResourceFormProps {
   initialValues?: Resource | null;
-  onSubmit: (values: any) => Promise<void>;
-  loading?: boolean;
+  onSubmit: (values: ResourceInput) => Promise<void>;
 }
 
-export function ResourceForm({ initialValues, onSubmit, loading }: ResourceFormProps) {
-  const [form] = Form.useForm();
+export function ResourceForm({ initialValues, onSubmit }: ResourceFormProps) {
+  const tCommon = useTranslations('common');
+  const schema = resourceSchema as unknown as z.ZodType<ResourceInput>;
 
-  useEffect(() => {
-    form.resetFields();
-    if (initialValues) {
-      form.setFieldsValue({
-        name: initialValues.name,
-        slug: initialValues.slug,
-        description: initialValues.description,
-      });
-    }
-  }, [form, initialValues]);
+  const defaultValues = useMemo<ResourceInput>(
+    () => ({
+      name: initialValues?.name ?? '',
+      slug: initialValues?.slug ?? '',
+      description: initialValues?.description ?? null,
+    }),
+    [initialValues]
+  );
 
   return (
-    <Form form={form} layout="vertical" onFinish={onSubmit}>
-      <Form.Item
-        name="name"
-        label="Resource Name"
-        rules={[
-          { required: true, message: 'Please enter resource name' },
-          { min: 3, message: 'Resource name must be at least 3 characters' },
-        ]}
-      >
-        <Input placeholder="Enter resource name (e.g., USER, PRODUCT)" />
-      </Form.Item>
-
-      <Form.Item
-        name="slug"
-        label="Slug"
-        rules={[
-          { required: true, message: 'Please enter slug' },
-          {
-            pattern: /^[a-z0-9-]+$/,
-            message: 'Slug can only contain lowercase letters, numbers, and hyphens',
-          },
-        ]}
-      >
-        <Input placeholder="Enter slug (e.g., user, product)" />
-      </Form.Item>
-
-      <Form.Item name="description" label="Description">
-        <Input.TextArea rows={4} placeholder="Enter resource description" />
-      </Form.Item>
-
-      <Form.Item className="mb-0">
-        <Space className="w-full justify-end">
-          <Button onClick={() => form.resetFields()}>Reset</Button>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            {initialValues ? 'Update' : 'Create'} Resource
-          </Button>
-        </Space>
-      </Form.Item>
+    <Form<ResourceInput>
+      schema={schema}
+      defaultValues={defaultValues as never}
+      values={defaultValues as never}
+      onSubmit={onSubmit}
+    >
+      <FormInput name="name" label={tCommon('name')} minLength={3} />
+      <FormInput name="slug" label={tCommon('slug')} pattern="^[a-z0-9-_]+$" />
+      <FormTextarea name="description" label={tCommon('description')} rows={4} />
+      <SubmitButton className="w-full">
+        {initialValues ? tCommon('update') : tCommon('create')}
+      </SubmitButton>
     </Form>
   );
 }

@@ -1,38 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { OrganizationMembership, Permission } from './types';
 import React from 'react';
-
-/**
- * Checks if a permission object allows a specific action
- * @param permission - The permission object to check
- * @param actionSlug - The action slug to check for
- * @returns True if the permission allows the specified action, false otherwise
- */
-function hasActionPermission(permission: Permission, actionSlug: string): boolean {
-  return permission.actions.some((a) => a.slug === actionSlug || a.slug === 'manage');
-}
-
-/**
- * Checks permissions for a specific resource and action
- * @param permissions - List of permissions to check
- * @param resourceSlug - The resource slug to check
- * @param actionSlug - The action slug to check
- * @returns True if permission exists for the specified resource and action, false otherwise
- */
-function checkResourcePermission(
-  permissions: Permission[],
-  resourceSlug: string,
-  actionSlug: string
-): boolean {
-  return permissions.some(
-    (p) =>
-      // Check for specific resource permission
-      (p.resource.slug === resourceSlug || p.resource.slug === '*') &&
-      hasActionPermission(p, actionSlug)
-  );
-}
+import { hasSessionPermission } from './permissions';
 
 /**
  * React hook that checks if the user has permission for a specific resource and action on the client side
@@ -45,7 +15,7 @@ function checkResourcePermission(
  * function UserManagementPage() {
  *   const canCreateUser = usePermission('user', 'create');
  *   const canEditUser = usePermission('user', 'edit');
- *   
+ *
  *   return (
  *     <div>
  *       {canCreateUser && <Button>Add New User</Button>}
@@ -59,53 +29,8 @@ export function usePermission(
   actionSlug: string,
   organizationId?: string
 ): boolean {
-  // Client-side permission check using the session data
   const { data: session } = useSession();
-  if (!session) return false;
-
-  // System admin can do anything
-  const hasAdminRole = session.user.userRoles?.some((ur: { role: { name: string } }) => ur.role.name === 'ADMIN');
-  if (hasAdminRole) return true;
-
-  // Check user's direct permissions
-  const hasDirectPermission = checkResourcePermission(
-    session.user.permissions,
-    resourceSlug,
-    actionSlug
-  );
-
-  if (hasDirectPermission) return true;
-
-  // If organizationId is provided, check organization permissions
-  if (organizationId) {
-    const membership = session.user.memberships.find(
-      (m: OrganizationMembership) => m.organization.id === organizationId
-    );
-
-    if (!membership) return false;
-
-    // Check role-based permissions
-    const rolePermissions = membership.role?.permissions || [];
-    const hasRolePermission = checkResourcePermission(rolePermissions, resourceSlug, actionSlug);
-
-    if (hasRolePermission) return true;
-
-    // Check organization-level permissions
-    const organizationPermissions = membership.organization.permissions;
-    return checkResourcePermission(organizationPermissions, resourceSlug, actionSlug);
-  }
-
-  // If no organizationId is provided, check permissions across all organizations
-  return session.user.memberships.some((membership: OrganizationMembership) => {
-    // Check role-based permissions
-    const rolePermissions = membership.role?.permissions || [];
-    const hasRolePermission = checkResourcePermission(rolePermissions, resourceSlug, actionSlug);
-
-    if (hasRolePermission) return true;
-
-    // Check organization-level permissions
-    return checkResourcePermission(membership.organization.permissions, resourceSlug, actionSlug);
-  });
+  return hasSessionPermission(session?.user, resourceSlug, actionSlug, organizationId);
 }
 
 /**
@@ -119,10 +44,10 @@ export function usePermission(
  * @example
  * // Usage example:
  * const UserCreateButton = withPermission(CreateButton, 'user', 'create');
- * 
+ *
  * // With permission check for a specific organization:
  * const OrgSettingsPanel = withPermission(SettingsPanel, 'organization', 'edit', organization.id);
- * 
+ *
  * // Then you can use these components normally:
  * return (
  *   <div>

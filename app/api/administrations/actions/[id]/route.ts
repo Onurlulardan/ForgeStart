@@ -1,142 +1,83 @@
-import { NextResponse, NextRequest } from 'next/server';
-import knex from '@/knex';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { requirePermission } from '@/lib/auth/server-permissions';
+import { NextResponse } from 'next/server';
+import { and, count, eq, ne, or } from 'drizzle-orm';
+import { db } from '@/db';
+import { actions, permissionActions } from '@/db/schema';
+import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
+import { requireApiPermission } from '@/lib/auth/server-permissions';
+import { actionSchema } from '@/lib/validation/admin';
 
-// GET /api/actions/[id]
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('action', 'view');
+    const authz = await requireApiPermission('action', 'view');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
-
-    // Get action by id
-    const action = await knex('Action')
-      .where({ id })
-      .first('id', 'name', 'description', 'createdAt', 'updatedAt');
-
-    if (action) {
-      // Count related permission actions
-      const permissionCount = await knex('PermissionAction')
-        .where({ actionId: id })
-        .count('id as count')
-        .first();
-
-      action._count = {
-        permissions: parseInt(permissionCount?.count?.toString() || '0', 10),
-      };
-    }
-
-    if (!action) {
-      return new NextResponse('Action not found', { status: 404 });
-    }
+    const [action] = await db.select().from(actions).where(eq(actions.id, id)).limit(1);
+    if (!action) return jsonError('Action not found', 404);
 
     return NextResponse.json(action);
   } catch (error) {
-    console.error('[ACTION_GET]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[ACTIONS_ID_GET]', error);
   }
 }
 
-// PUT /api/actions/[id]
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('action', 'edit');
+    const authz = await requireApiPermission('action', 'edit');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
-    const body = await request.json();
-    const { name, description } = body;
+    const parsed = await parseJson(request, actionSchema);
+    if (!parsed.ok) return parsed.response;
 
-    if (!name) {
-      return new NextResponse('Name is required', { status: 400 });
-    }
+    const [existingAction] = await db.select().from(actions).where(eq(actions.id, id)).limit(1);
+    if (!existingAction) return jsonError('Action not found', 404);
 
-    // Check if action exists
-    const existingAction = await knex('Action').where({ id }).first();
+    const [duplicate] = await db
+      .select({ id: actions.id })
+      .from(actions)
+      .where(
+        and(
+          ne(actions.id, id),
+          or(eq(actions.name, parsed.data.name), eq(actions.slug, parsed.data.slug))
+        )
+      )
+      .limit(1);
+    if (duplicate) return jsonError('Action with this name or slug already exists', 409);
 
-    if (!existingAction) {
-      return new NextResponse('Action not found', { status: 404 });
-    }
-
-    // Check if name is being changed and if new name is already taken
-    if (name !== existingAction.name) {
-      const nameExists = await knex('Action').where({ name }).whereNot({ id }).first();
-
-      if (nameExists) {
-        return new NextResponse('Action with this name already exists', { status: 400 });
-      }
-    }
-
-    // Update action
-    const [action] = await knex('Action')
-      .where({ id })
-      .update({
-        name,
-        description,
-        updatedAt: knex.fn.now(),
-      })
-      .returning(['id', 'name', 'description', 'createdAt', 'updatedAt']);
+    const [action] = await db
+      .update(actions)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(eq(actions.id, id))
+      .returning();
 
     return NextResponse.json(action);
   } catch (error) {
-    console.error('[ACTION_PUT]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[ACTIONS_ID_PUT]', error);
   }
 }
 
-// DELETE /api/actions/[id]
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('action', 'delete');
+    const authz = await requireApiPermission('action', 'delete');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
+    const [existingAction] = await db.select().from(actions).where(eq(actions.id, id)).limit(1);
+    if (!existingAction) return jsonError('Action not found', 404);
 
-    // Check if action exists
-    const existingAction = await knex('Action').where({ id }).first();
+    const [usage] = await db
+      .select({ count: count() })
+      .from(permissionActions)
+      .where(eq(permissionActions.actionId, id));
 
-    if (!existingAction) {
-      return new NextResponse('Action not found', { status: 404 });
+    if (usage.count > 0) {
+      return jsonError('Cannot delete action that has associated permissions', 400);
     }
 
-    // Check if action has associated permission actions
-    const permissionCount = await knex('PermissionAction')
-      .where({ actionId: id })
-      .count('id as count')
-      .first();
-
-    const permissionsCount = parseInt(permissionCount?.count?.toString() || '0', 10);
-
-    if (permissionsCount > 0) {
-      return new NextResponse('Cannot delete action that has associated permissions', {
-        status: 400,
-      });
-    }
-
-    // Delete action
-    await knex('Action').where({ id }).delete();
-
-    return NextResponse.json({ message: 'Action deleted successfully' });
+    await db.delete(actions).where(eq(actions.id, id));
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('[ACTION_DELETE]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[ACTIONS_ID_DELETE]', error);
   }
 }

@@ -1,108 +1,146 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Form, Input, Button } from 'antd';
-import { UserOutlined, LockOutlined, PhoneOutlined, MailOutlined } from '@ant-design/icons';
 import { signIn } from 'next-auth/react';
-import { postRequest } from '@/lib/apiClient';
+import { useTranslations } from 'next-intl';
+import { LockIcon, MailIcon, PhoneIcon, UserIcon } from 'lucide-react';
+import { z } from 'zod';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Form, FormField, SubmitButton } from '@/components/forms';
+import { Link } from '@/i18n/navigation';
+import { authApi } from '@/lib/api/client';
+import { registerSchema } from '@/lib/validation/admin';
 import { useNotification } from '@/contexts/NotificationContext';
-
-type FormValues = {
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-};
+import type { RegisterInput } from '@/lib/api/client';
 
 export default function RegisterForm() {
-  const [loading, setLoading] = useState(false);
+  const t = useTranslations('auth');
   const router = useRouter();
-  const [form] = Form.useForm();
   const { showNotification } = useNotification();
+  const schema = registerSchema as unknown as z.ZodType<RegisterInput>;
 
-  const onFinish = async (values: FormValues) => {
-    setLoading(true);
-    try {
-      await postRequest('/api/auth/register', values);
-
-      showNotification('success', 'Success', 'Account created successfully');
-
-      // Auto login after successful registration
-      const result = await signIn('credentials', {
-        email: values.email,
-        password: values.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        showNotification('error', 'Login Failed', 'Account created but automatic login failed');
-        return;
-      }
-
-      router.push('/');
-    } catch (error) {
-      showNotification(
-        'error',
-        'Registration Failed',
-        error instanceof Error ? error.message : 'Failed to create account'
-      );
-    } finally {
-      setLoading(false);
+  const submit = async (values: RegisterInput) => {
+    await authApi.register(values);
+    showNotification('success', t('registerSuccess'));
+    const result = await signIn('credentials', {
+      email: values.email,
+      password: values.password,
+      redirect: false,
+    });
+    if (!result?.error) {
+      router.push('/dashboard');
     }
   };
 
+  const defaultValues: RegisterInput = {
+    email: '',
+    password: '',
+    firstName: null,
+    lastName: null,
+    phone: null,
+  };
+
   return (
-    <Form form={form} name="register" onFinish={onFinish} layout="vertical" requiredMark={false}>
-      <div className="grid grid-cols-2 gap-4">
-        <Form.Item name="firstName" label="First Name">
-          <Input prefix={<UserOutlined />} placeholder="First Name" />
-        </Form.Item>
-
-        <Form.Item name="lastName" label="Last Name">
-          <Input prefix={<UserOutlined />} placeholder="Last Name" />
-        </Form.Item>
+    <Form<RegisterInput>
+      schema={schema}
+      defaultValues={defaultValues as never}
+      onSubmit={submit}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField<RegisterInput> name="firstName" label={t('firstNameLabel')}>
+          {(field) => (
+            <InputGroup>
+              <InputGroupAddon>
+                <UserIcon />
+              </InputGroupAddon>
+              <InputGroupInput
+                id={field.name}
+                value={(field.value as string | null | undefined) ?? ''}
+                onChange={(event) => field.onChange(event.target.value || null)}
+                onBlur={field.onBlur}
+                autoComplete="given-name"
+              />
+            </InputGroup>
+          )}
+        </FormField>
+        <FormField<RegisterInput> name="lastName" label={t('lastNameLabel')}>
+          {(field) => (
+            <InputGroup>
+              <InputGroupAddon>
+                <UserIcon />
+              </InputGroupAddon>
+              <InputGroupInput
+                id={field.name}
+                value={(field.value as string | null | undefined) ?? ''}
+                onChange={(event) => field.onChange(event.target.value || null)}
+                onBlur={field.onBlur}
+                autoComplete="family-name"
+              />
+            </InputGroup>
+          )}
+        </FormField>
       </div>
-
-      <Form.Item
-        name="email"
-        label="Email"
-        rules={[
-          { required: true, message: 'Please input your email!' },
-          { type: 'email', message: 'Please enter a valid email!' },
-        ]}
-      >
-        <Input prefix={<MailOutlined />} placeholder="Email" />
-      </Form.Item>
-
-      <Form.Item
-        name="password"
-        label="Password"
-        rules={[
-          { required: true, message: 'Please input your password!' },
-          { min: 8, message: 'Password must be at least 8 characters!' },
-        ]}
-      >
-        <Input.Password prefix={<LockOutlined />} placeholder="Password" />
-      </Form.Item>
-
-      <Form.Item name="phone" label="Phone Number">
-        <Input prefix={<PhoneOutlined />} placeholder="Phone Number" />
-      </Form.Item>
-
-      <Form.Item>
-        <Button type="primary" htmlType="submit" loading={loading} block>
-          Create Account
-        </Button>
-      </Form.Item>
-
-      <div className="text-center">
-        <Link href="/auth/login" className="text-blue-600 hover:text-blue-700">
-          Already have an account? Sign in
+      <FormField<RegisterInput> name="email" label={t('emailLabel')}>
+        {(field) => (
+          <InputGroup>
+            <InputGroupAddon>
+              <MailIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              id={field.name}
+              type="email"
+              autoComplete="email"
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
+            />
+          </InputGroup>
+        )}
+      </FormField>
+      <FormField<RegisterInput> name="password" label={t('passwordLabel')}>
+        {(field) => (
+          <InputGroup>
+            <InputGroupAddon>
+              <LockIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              id={field.name}
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
+            />
+          </InputGroup>
+        )}
+      </FormField>
+      <FormField<RegisterInput> name="phone" label={t('phoneLabel')}>
+        {(field) => (
+          <InputGroup>
+            <InputGroupAddon>
+              <PhoneIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              id={field.name}
+              autoComplete="tel"
+              value={(field.value as string | null | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value || null)}
+              onBlur={field.onBlur}
+            />
+          </InputGroup>
+        )}
+      </FormField>
+      <SubmitButton className="w-full">{t('submitRegister')}</SubmitButton>
+      <p className="text-center text-sm text-muted-foreground">
+        {t('hasAccount')}{' '}
+        <Link
+          href="/auth/login"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          {t('loginLink')}
         </Link>
-      </div>
+      </p>
     </Form>
   );
 }

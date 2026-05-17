@@ -1,9 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Drawer, Form, Select, Button } from 'antd';
-import { Organization, User } from '@/knex/types';
-import { getRequest, postRequest } from '@/lib/apiClient';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
+import {
+  Form,
+  FormMultiSelect,
+  SubmitButton,
+} from '@/components/forms';
+import { CrudSheet } from '@/components/layout';
+import { addUsersToOrganizationSchema } from '@/lib/validation/admin';
+import { useAvailableUsers, useOrganizationMutations } from '@/lib/query';
+import type {
+  AddUsersToOrganizationInput,
+  Organization,
+} from '@/lib/api/client';
 
 interface AddUsersDrawerProps {
   organization: Organization | null;
@@ -12,81 +23,51 @@ interface AddUsersDrawerProps {
 }
 
 export function AddUsersDrawer({ organization, open, onClose }: AddUsersDrawerProps) {
-  const [form] = Form.useForm();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const t = useTranslations('admin.organizations');
+  const tCommon = useTranslations('common');
+  const { data: users = [], isLoading } = useAvailableUsers();
+  const { addUsers } = useOrganizationMutations();
+  const schema = addUsersToOrganizationSchema as unknown as z.ZodType<AddUsersToOrganizationInput>;
 
-  useEffect(() => {
-    if (open) {
-      fetchAvailableUsers();
-    }
-  }, [open]);
+  const defaultValues = useMemo<AddUsersToOrganizationInput>(
+    () => ({ userIds: [], roleId: null }),
+    []
+  );
 
-  const fetchAvailableUsers = async () => {
-    try {
-      const data = await getRequest('/administrations/users/available');
-      setUsers(data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    }
-  };
-
-  const handleSubmit = async (values: { userIds: string[] }) => {
+  const handleSubmit = async (values: AddUsersToOrganizationInput) => {
     if (!organization) return;
-
-    try {
-      setLoading(true);
-      const result = await postRequest(
-        `/administrations/organizations/${organization.id}/add-users`,
-        { userIds: values.userIds }
-      );
-      form.resetFields();
-      onClose();
-      return result;
-    } catch (error) {
-      console.error('Failed to add users:', error);
-    } finally {
-      setLoading(false);
-    }
+    await addUsers.mutateAsync({ id: organization.id, data: values });
+    onClose();
   };
-
-  if (!organization) return null;
 
   return (
-    <Drawer
-      title={`Add Users to ${organization.name}`}
-      placement="right"
-      onClose={onClose}
+    <CrudSheet
       open={open}
-      width={720}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={`${t('addUsersTitle')} — ${organization?.name ?? ''}`}
+      description={t('addUsersDescription')}
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Form.Item
+      <Form<AddUsersToOrganizationInput>
+        schema={schema}
+        defaultValues={defaultValues as never}
+        values={defaultValues as never}
+        onSubmit={handleSubmit}
+      >
+        <FormMultiSelect
           name="userIds"
-          label="Select Users"
-          rules={[{ required: true, message: 'Please select users' }]}
-        >
-          <Select
-            mode="multiple"
-            placeholder="Select users to add"
-            style={{ width: '100%' }}
-            optionFilterProp="children"
-            loading={!users.length}
-          >
-            {users.map((user) => (
-              <Select.Option key={user.id} value={user.id}>
-                {user.firstName} {user.lastName} ({user.email})
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading} block>
-            Add Users
-          </Button>
-        </Form.Item>
+          label={tCommon('all')}
+          options={users.map((user) => ({
+            value: user.id,
+            label: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
+            description: user.email,
+          }))}
+          emptyText={isLoading ? tCommon('loading') : tCommon('noData')}
+          disabled={isLoading}
+        />
+        <SubmitButton className="w-full">{t('addUsers')}</SubmitButton>
       </Form>
-    </Drawer>
+    </CrudSheet>
   );
 }

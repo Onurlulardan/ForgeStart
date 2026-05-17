@@ -1,243 +1,150 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, Button, Tag, Typography, Dropdown, MenuProps, Drawer, Modal } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
-import { usePermission } from '@/lib/auth/client-permissions';
-import { DataGrid } from '@/core/components/datagrid';
-import { Organization, OrgStatus } from '@/knex/types';
+import { useMemo, useState } from 'react';
+import { EditIcon, PlusIcon, Trash2Icon, UserPlusIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Card, CardContent } from '@/components/ui/card';
+import { DataGrid } from '@/components/data-grid';
+import { PageShell, CrudSheet } from '@/components/layout';
+import { PermissionButton } from '@/components/permission';
+import { StatusBadge } from '@/components/app/status-badge';
+import { useCrudResource } from '@/lib/hooks';
+import { useOrganizations, useOrganizationMutations } from '@/lib/query';
+import type { OrganizationInput, OrganizationWithCount } from '@/lib/api/client';
 import { OrganizationForm } from './components/organization-form';
 import { AddUsersDrawer } from './components/add-users-drawer';
-import { getRequest, deleteRequest, postRequest, putRequest } from '@/lib/apiClient';
-
-const { Title } = Typography;
 
 export default function OrganizationsPage() {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [addUsersDrawerOpen, setAddUsersDrawerOpen] = useState(false);
-  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
-  const router = useRouter();
+  const t = useTranslations('admin.organizations');
+  const tCommon = useTranslations('common');
+  const { data: organizations = [], isLoading } = useOrganizations();
+  const mutations = useOrganizationMutations();
 
-  // Permission hooks
-  const canCreate = usePermission('organization', 'create');
-  const canEdit = usePermission('organization', 'edit');
-  const canDelete = usePermission('organization', 'delete');
-  const canAddUsers = usePermission('organization', 'update');
+  const rootOrganizations = useMemo(
+    () => organizations.filter((organization) => !organization.parentId),
+    [organizations]
+  );
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, []);
+  const [addUsersTarget, setAddUsersTarget] = useState<OrganizationWithCount | null>(null);
 
-  const fetchOrganizations = async () => {
-    try {
-      const data = await getRequest<Organization[]>('/administrations/organizations');
-      const rootOrgs = data.filter((org) => !org.parentId);
-      setOrganizations(rootOrgs);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+  const crud = useCrudResource<OrganizationWithCount>({
+    resource: 'organization',
+    onDelete: async (organization) => {
+      await mutations.remove.mutateAsync(organization.id);
+    },
+    deleteConfirm: {
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
+    },
+  });
+
+  const submit = async (values: OrganizationInput) => {
+    if (crud.selected) {
+      await mutations.update.mutateAsync({ id: crud.selected.id, data: values });
+    } else {
+      await mutations.create.mutateAsync(values);
     }
+    crud.closeForm();
   };
 
-  const handleDelete = async () => {
-    if (!orgToDelete) return;
-
-    try {
-      await deleteRequest(`/administrations/organizations/${orgToDelete.id}`);
-      setDeleteModalVisible(false);
-      setOrgToDelete(null);
-      fetchOrganizations();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleSubmit = async (values: any) => {
-    setFormLoading(true);
-    try {
-      if (selectedOrg) {
-        await putRequest(`/administrations/organizations/${selectedOrg.id}`, values);
-      } else {
-        await postRequest('/administrations/organizations', values);
-      }
-
-      setDrawerVisible(false);
-      setSelectedOrg(null);
-      fetchOrganizations();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const columns = [
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 100,
-      render: (record: Organization) => {
-        const menuItems: MenuProps['items'] = [];
-
-        if (canEdit) {
-          menuItems.push({
-            key: 'edit',
-            label: 'Edit',
-            icon: <EditOutlined />,
-            onClick: () => {
-              setSelectedOrg(record);
-              setDrawerVisible(true);
-            },
-          });
-        }
-
-        if (canAddUsers) {
-          menuItems.push({
-            key: 'addUsers',
-            label: 'Add Users',
-            icon: <PlusOutlined />,
-            onClick: () => {
-              setSelectedOrg(record);
-              setAddUsersDrawerOpen(true);
-            },
-          });
-        }
-
-        if (canDelete) {
-          menuItems.push({
-            key: 'delete',
-            label: 'Delete',
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              setOrgToDelete(record);
-              setDeleteModalVisible(true);
-            },
-          });
-        }
-
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        );
+  const columns = useMemo<ColumnDef<OrganizationWithCount>[]>(
+    () => [
+      {
+        id: 'organization',
+        header: t('columns.organization'),
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">{row.original.name}</div>
+            <div className="text-xs text-muted-foreground">{row.original.slug}</div>
+          </div>
+        ),
       },
-    },
-    {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: 'Slug',
-      dataIndex: 'slug',
-      key: 'slug',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: OrgStatus) => (
-        <Tag color={status === 'ACTIVE' ? 'green' : status === 'INACTIVE' ? 'orange' : 'red'}>
-          {status}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Members',
-      key: 'members',
-      render: (record: any) => record._count?.members || 0,
-    },
-  ];
-
-  const headerContent = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-      <Title level={2}>Organizations</Title>
-      {canCreate && (
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setSelectedOrg(null);
-            setDrawerVisible(true);
-          }}
-        >
-          Create Organization
-        </Button>
-      )}
-    </div>
+      {
+        id: 'status',
+        header: t('columns.status'),
+        accessorKey: 'status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'members',
+        header: t('columns.members'),
+        cell: ({ row }) => row.original._count?.members ?? 0,
+      },
+    ],
+    [t]
   );
 
   return (
-    <>
-      <Card>
-        {headerContent}
-        <DataGrid
-          columns={columns}
-          dataSource={organizations}
-          loading={loading}
-          rowKey={(record) => `org-${record.id}`}
-          expandable={{
-            defaultExpandAllRows: true,
-            childrenColumnName: 'children',
-          }}
-          onRowDoubleClick={
-            canEdit
-              ? (record) => {
-                  setSelectedOrg(record);
-                  setDrawerVisible(true);
-                }
-              : undefined
-          }
-        />
+    <PageShell
+      title={t('title')}
+      description={t('description')}
+      actions={
+        <PermissionButton resource="organization" action="create" onClick={crud.openCreate}>
+          <PlusIcon />
+          {t('createButton')}
+        </PermissionButton>
+      }
+    >
+      <Card className="rounded-lg">
+        <CardContent className="p-4">
+          <DataGrid<OrganizationWithCount>
+            data={rootOrganizations}
+            columns={columns}
+            loading={isLoading}
+            columnVisibilityStorageKey="admin-organizations"
+            exportFileName="organizations"
+            toolbar={{ search: true, columnVisibility: true, exportable: true }}
+            getSubRows={(row) => row.children}
+            defaultExpandAll
+            rowActions={() => [
+              {
+                label: tCommon('edit'),
+                icon: <EditIcon />,
+                disabled: () => !crud.permissions.canEdit,
+                onSelect: crud.openEdit,
+              },
+              {
+                label: t('addUsers'),
+                icon: <UserPlusIcon />,
+                disabled: () => !crud.permissions.canEdit,
+                onSelect: (record) => setAddUsersTarget(record),
+              },
+              {
+                label: tCommon('delete'),
+                icon: <Trash2Icon />,
+                destructive: true,
+                disabled: () => !crud.permissions.canDelete,
+                onSelect: (record) => {
+                  void crud.confirmDelete(record);
+                },
+              },
+            ]}
+            onRowDoubleClick={crud.permissions.canEdit ? crud.openEdit : undefined}
+          />
+        </CardContent>
       </Card>
 
-      <Drawer
-        title={selectedOrg ? 'Edit Organization' : 'Create Organization'}
-        width={720}
-        open={drawerVisible}
-        onClose={() => {
-          setDrawerVisible(false);
-          setSelectedOrg(null);
+      <CrudSheet
+        open={crud.isFormOpen}
+        onOpenChange={(open) => {
+          if (!open) crud.closeForm();
         }}
-        destroyOnClose
+        title={crud.selected ? t('editTitle') : t('createTitle')}
+        description={crud.selected ? t('editDescription') : t('createDescription')}
       >
         <OrganizationForm
-          initialValues={selectedOrg || undefined}
-          onSubmit={handleSubmit}
-          loading={formLoading}
+          key={crud.selected?.id ?? 'new'}
+          initialValues={crud.selected}
+          onSubmit={submit}
         />
-      </Drawer>
+      </CrudSheet>
 
       <AddUsersDrawer
-        organization={selectedOrg}
-        open={addUsersDrawerOpen}
-        onClose={() => {
-          setAddUsersDrawerOpen(false);
-          setSelectedOrg(null);
-        }}
+        organization={addUsersTarget}
+        open={Boolean(addUsersTarget)}
+        onClose={() => setAddUsersTarget(null)}
       />
-
-      <Modal
-        title="Delete Organization"
-        open={deleteModalVisible}
-        onOk={handleDelete}
-        onCancel={() => {
-          setDeleteModalVisible(false);
-          setOrgToDelete(null);
-        }}
-        okText="Delete"
-        okButtonProps={{ danger: true }}
-      >
-        <p>Are you sure you want to delete this organization? This action cannot be undone.</p>
-      </Modal>
-    </>
+    </PageShell>
   );
 }

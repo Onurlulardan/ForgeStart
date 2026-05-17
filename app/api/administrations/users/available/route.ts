@@ -1,32 +1,15 @@
-import { NextResponse, NextRequest } from 'next/server';
-import knex from '@/knex';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { requirePermission } from '@/lib/auth/server-permissions';
+import { NextResponse } from 'next/server';
+import { listAvailableUsers } from '@/lib/api/admin-queries';
+import { handleRouteError } from '@/lib/api/response';
+import { requireApiPermission } from '@/lib/auth/server-permissions';
 
-// GET /api/users/available
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const authz = await requireApiPermission('user', 'view');
+    if (!authz.ok) return authz.response;
 
-    await requirePermission('user', 'view');
-
-    const users = await knex('User')
-      .where({ status: 'ACTIVE' })
-      .select(
-        'id',
-        'email',
-        'firstName',
-        'lastName'
-      )
-      .orderBy('firstName', 'asc');
-
-    return NextResponse.json(users);
+    return NextResponse.json(await listAvailableUsers());
   } catch (error) {
-    console.error('[USERS_AVAILABLE_GET]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[USERS_AVAILABLE_GET]', error);
   }
 }
