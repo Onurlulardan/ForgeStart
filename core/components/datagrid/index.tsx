@@ -1,7 +1,13 @@
 'use client';
 
 import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  Columns3Icon,
+  DownloadIcon,
+  SearchIcon,
+} from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -11,6 +17,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +47,8 @@ export interface DataGridProps<T> {
   total?: number;
   rowKey?: keyof T | ((record: T) => string);
   headerContent?: ReactNode;
+  storageKey?: string;
+  enableToolbar?: boolean;
   onRowDoubleClick?: (record: T) => void;
   expandable?: {
     defaultExpandAllRows?: boolean;
@@ -90,6 +106,8 @@ export function DataGrid<T extends object>({
   total,
   rowKey = 'id' as keyof T,
   headerContent,
+  storageKey,
+  enableToolbar = true,
   onRowDoubleClick,
   columns,
   dataSource = [],
@@ -97,7 +115,46 @@ export function DataGrid<T extends object>({
 }: DataGridProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(pageSize);
+  const [filterText, setFilterText] = useState('');
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const childrenColumnName = expandable?.childrenColumnName ?? 'children';
+  const preferenceKey = storageKey ? `datagrid:${storageKey}` : null;
+
+  const normalizedColumns = useMemo(
+    () =>
+      columns.map((column, index) => ({
+        ...column,
+        id: column.key ?? String(column.dataIndex ?? index),
+      })),
+    [columns]
+  );
+
+  const visibleColumns = useMemo(
+    () => normalizedColumns.filter((column) => !hiddenColumns.has(column.id)),
+    [hiddenColumns, normalizedColumns]
+  );
+
+  useEffect(() => {
+    if (!preferenceKey || typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(preferenceKey);
+    if (!raw) return;
+
+    try {
+      const preferences = JSON.parse(raw) as { filterText?: string; hiddenColumns?: string[] };
+      setFilterText(preferences.filterText ?? '');
+      setHiddenColumns(new Set(preferences.hiddenColumns ?? []));
+    } catch {
+      window.localStorage.removeItem(preferenceKey);
+    }
+  }, [preferenceKey]);
+
+  useEffect(() => {
+    if (!preferenceKey || typeof window === 'undefined') return;
+    window.localStorage.setItem(
+      preferenceKey,
+      JSON.stringify({ filterText, hiddenColumns: [...hiddenColumns] })
+    );
+  }, [filterText, hiddenColumns, preferenceKey]);
 
   const defaultExpanded = useMemo(() => {
     if (!expandable?.defaultExpandAllRows) return new Set<string>();
@@ -124,14 +181,40 @@ export function DataGrid<T extends object>({
     }
   }, [defaultExpanded, expandable?.defaultExpandAllRows]);
 
-  const visibleRows = useMemo(() => {
+  const filteredRows = useMemo(() => {
     const flat = flattenRows(dataSource, rowKey, childrenColumnName, expandedRows);
-    const start = (currentPage - 1) * currentPageSize;
-    return flat.slice(start, start + currentPageSize);
-  }, [childrenColumnName, currentPage, currentPageSize, dataSource, expandedRows, rowKey]);
+    const normalizedFilter = filterText.trim().toLowerCase();
+    if (!normalizedFilter) return flat;
 
-  const itemCount = total ?? dataSource.length;
+    return flat.filter(({ record }) =>
+      JSON.stringify(record).toLowerCase().includes(normalizedFilter)
+    );
+  }, [childrenColumnName, dataSource, expandedRows, filterText, rowKey]);
+
+  const visibleRows = useMemo(() => {
+    const start = (currentPage - 1) * currentPageSize;
+    return filteredRows.slice(start, start + currentPageSize);
+  }, [currentPage, currentPageSize, filteredRows]);
+
+  const itemCount = total ?? filteredRows.length;
   const pageCount = Math.max(1, Math.ceil(itemCount / currentPageSize));
+
+  const exportCsv = () => {
+    const headers = visibleColumns.map((column) => String(column.title));
+    const rows = filteredRows.map(({ record }) =>
+      visibleColumns.map((column) => {
+        const value = getValue(record, column.dataIndex);
+        return `"${String(value ?? '').replaceAll('"', '""')}"`;
+      })
+    );
+    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${storageKey ?? 'data-grid'}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const toggleRow = (key: string) => {
     setExpandedRows((current) => {
@@ -148,14 +231,65 @@ export function DataGrid<T extends object>({
   return (
     <div className="flex flex-col gap-4">
       {headerContent}
+      {enableToolbar && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              value={filterText}
+              onChange={(event) => {
+                setFilterText(event.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Filter records"
+            />
+          </div>
+          <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant="outline" />}>
+                <Columns3Icon data-icon="inline-start" />
+                Columns
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuGroup>
+                  {normalizedColumns.map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={!hiddenColumns.has(column.id)}
+                      onCheckedChange={(checked) => {
+                        setHiddenColumns((current) => {
+                          const next = new Set(current);
+                          if (checked) {
+                            next.delete(column.id);
+                          } else {
+                            next.add(column.id);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      {column.title}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button type="button" variant="outline" onClick={exportCsv}>
+              <DownloadIcon data-icon="inline-start" />
+              CSV
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="overflow-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               {expandable && <TableHead className="w-10" />}
-              {columns.map((column, index) => (
+              {visibleColumns.map((column) => (
                 <TableHead
-                  key={column.key ?? String(column.dataIndex ?? index)}
+                  key={column.id}
                   className={column.className}
                   style={{ width: column.width }}
                 >
@@ -173,8 +307,8 @@ export function DataGrid<T extends object>({
                         <Skeleton className="h-5 w-5" />
                       </TableCell>
                     )}
-                    {columns.map((column, columnIndex) => (
-                      <TableCell key={column.key ?? columnIndex}>
+                    {visibleColumns.map((column, columnIndex) => (
+                      <TableCell key={column.id ?? columnIndex}>
                         <Skeleton className="h-5 w-full max-w-40" />
                       </TableCell>
                     ))}
@@ -207,11 +341,11 @@ export function DataGrid<T extends object>({
                         )}
                       </TableCell>
                     )}
-                    {columns.map((column, columnIndex) => {
+                    {visibleColumns.map((column, columnIndex) => {
                       const value = getValue(record, column.dataIndex);
                       return (
                         <TableCell
-                          key={column.key ?? String(column.dataIndex ?? columnIndex)}
+                          key={column.id}
                           className={column.className}
                           style={
                             columnIndex === 0 && level
@@ -230,7 +364,7 @@ export function DataGrid<T extends object>({
             {!loading && visibleRows.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length + (expandable ? 1 : 0)}
+                  colSpan={visibleColumns.length + (expandable ? 1 : 0)}
                   className="h-32 text-center text-muted-foreground"
                 >
                   No records found.

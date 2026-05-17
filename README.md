@@ -15,8 +15,9 @@ cp .env.example .env
 docker compose --profile dev up --build
 ```
 
-The dev profile starts PostgreSQL, applies Drizzle migrations, seeds demo data,
-and starts the Next.js app at `http://localhost:3000`.
+The dev profile starts PostgreSQL, applies Drizzle migrations, seeds base data,
+and starts the Next.js app at `http://localhost:3000` unless `APP_PORT` is
+changed in `.env`.
 
 ## Stack
 
@@ -29,6 +30,18 @@ and starts the Next.js app at `http://localhost:3000`.
 - Package manager: Yarn 4 with `nodeLinker: node-modules`
 - Tests: Vitest, React Testing Library, Playwright
 - Tooling: ESLint flat config, Prettier, strict TypeScript
+
+## Product Modules
+
+- Admin shell with shadcn/ui and responsive data tables
+- User, role, permission and organization administration
+- RBAC matrix for role/resource/action grants
+- Invitations, invite acceptance and password reset flows
+- API keys for service-account style integration credentials
+- System center with setup doctor, health, version and migration status
+- Application settings backed by PostgreSQL
+- Security logs and operational audit logs
+- Demo seed mode for realistic local data
 
 ## Environment
 
@@ -65,6 +78,7 @@ yarn format:check     # Prettier check
 yarn test             # Unit/component tests
 yarn test:e2e         # Playwright smoke tests
 yarn verify           # lint + typecheck + test + build
+yarn doctor           # Local setup doctor
 ```
 
 Docker shortcuts:
@@ -91,6 +105,7 @@ Drizzle is the only database layer. Knex was removed in v2.
 yarn db:generate      # Generate a migration from db/schema.ts
 yarn db:migrate       # Apply migrations from ./drizzle
 yarn db:seed          # Seed roles, resources, actions, super admin
+yarn db:seed:demo     # Add demo organizations, users and log data
 yarn db:reset         # Drop public schema, migrate, seed
 yarn db:studio        # Open Drizzle Studio
 ```
@@ -135,7 +150,9 @@ db/                   Drizzle schema, connection, migrations runner, seed
 drizzle/              Generated SQL migrations
 lib/api/              Route helpers and admin query mappers
 lib/auth/             Permission checks and session payload helpers
+lib/system/           Health and migration status helpers
 lib/validation/       Zod request validation
+scripts/              Local setup helper scripts
 core/                 Shared UI components and layout
 tests/e2e/            Playwright smoke tests
 ```
@@ -149,6 +166,33 @@ organization-based permissions.
 API routes use `requireApiPermission`, which returns JSON `401` or `403`
 responses instead of redirecting. Client components use `usePermission` against
 the same permission model.
+
+Playwright uses `tests/e2e/auth.setup.ts` to create a reusable authenticated
+browser state under `playwright/.auth/`, which is ignored by Git because it
+contains session cookies.
+
+## Operations
+
+Health endpoints:
+
+```text
+GET /api/health
+GET /api/version
+GET /api/setup/doctor
+```
+
+Admin modules:
+
+```text
+/administrations/system
+/administrations/rbac
+/administrations/invitations
+/administrations/api-keys
+/administrations/audit-logs
+```
+
+`instrumentation.ts` registers a lightweight startup event and leaves the
+project ready for OpenTelemetry wiring.
 
 ## v1 to v2 Notes
 

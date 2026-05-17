@@ -197,6 +197,7 @@ export default function UsersPage() {
             columns={columns}
             dataSource={users}
             rowKey="id"
+            storageKey="admin-users"
             loading={loading}
             onRowDoubleClick={
               canEdit

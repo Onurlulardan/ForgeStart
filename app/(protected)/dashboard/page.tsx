@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRightIcon, Building2Icon, ShieldCheckIcon, UsersIcon } from 'lucide-react';
+import {
+  ArrowRightIcon,
+  Building2Icon,
+  DatabaseIcon,
+  GitCommitIcon,
+  ShieldCheckIcon,
+  UsersIcon,
+} from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +22,20 @@ interface DashboardStats {
   totalOrganizations: number;
   totalUsers: number;
   activeUsers: number;
+}
+
+interface RuntimeHealth {
+  ok: boolean;
+  app: {
+    version: string;
+    commit: string | null;
+  };
+  database: {
+    connected: boolean;
+    migrations: {
+      appliedCount: number;
+    };
+  };
 }
 
 const statMeta = [
@@ -46,6 +67,7 @@ export default function Dashboard() {
     activeUsers: 0,
   });
   const [loading, setLoading] = useState(false);
+  const [runtime, setRuntime] = useState<RuntimeHealth | null>(null);
   const canViewStats = usePermission('dashboard', 'view');
 
   useEffect(() => {
@@ -53,8 +75,12 @@ export default function Dashboard() {
       if (!canViewStats) return;
       setLoading(true);
       try {
-        const data = await getRequest<DashboardStats>('/dashboard/stats');
+        const [data, health] = await Promise.all([
+          getRequest<DashboardStats>('/dashboard/stats'),
+          getRequest<RuntimeHealth>('/health'),
+        ]);
         setStats(data);
+        setRuntime(health);
       } catch (error) {
         console.error('Failed to fetch dashboard stats:', error);
       } finally {
@@ -110,14 +136,53 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle>Starter readiness</CardTitle>
           <CardDescription>
-            What this V2 baseline gives a local developer immediately.
+            Runtime signals for local development and production smoke checks.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           {[
-            'Compose starts PostgreSQL and app together',
-            'Drizzle owns migration and seed flow',
-            'Permission checks return API-first JSON responses',
+            {
+              label: 'Database',
+              value: runtime?.database.connected ? 'Connected' : 'Unavailable',
+              icon: DatabaseIcon,
+            },
+            {
+              label: 'Migrations',
+              value: `${runtime?.database.migrations.appliedCount ?? 0} applied`,
+              icon: ShieldCheckIcon,
+            },
+            {
+              label: 'Version',
+              value: runtime?.app.commit ?? runtime?.app.version ?? 'local',
+              icon: GitCommitIcon,
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="rounded-lg border bg-background p-4 text-sm">
+                <div className="flex items-center gap-2 font-medium">
+                  <Icon />
+                  {item.label}
+                </div>
+                <p className="mt-2 truncate text-muted-foreground">{item.value}</p>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-lg">
+        <CardHeader>
+          <CardTitle>Starter modules</CardTitle>
+          <CardDescription>
+            Admin workflows added for a production-oriented starter baseline.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          {[
+            'RBAC matrix for role grants',
+            'Invitations and password reset',
+            'API keys, settings and audit logs',
           ].map((item) => (
             <div key={item} className="rounded-lg border bg-background p-4 text-sm">
               {item}

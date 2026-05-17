@@ -181,6 +181,7 @@ export default function OrganizationsPage() {
             dataSource={organizations}
             loading={loading}
             rowKey={(record) => `org-${record.id}`}
+            storageKey="admin-organizations"
             expandable={{
               defaultExpandAllRows: true,
               childrenColumnName: 'children',

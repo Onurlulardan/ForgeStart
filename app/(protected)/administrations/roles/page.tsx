@@ -191,6 +191,7 @@ export default function RolesPage() {
             dataSource={roles}
             loading={loading}
             rowKey="id"
+            storageKey="admin-roles"
             onRowDoubleClick={
               canEdit
                 ? (record) => {

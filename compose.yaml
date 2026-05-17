@@ -56,9 +56,25 @@ services:
     ports:
       - '${APP_PORT:-3000}:3000'
     volumes:
-      - .:/app
-      - app-node-modules:/app/node_modules
-      - app-next-cache:/app/.next
+      - ./app:/app/app
+      - ./components:/app/components
+      - ./contexts:/app/contexts
+      - ./core:/app/core
+      - ./db:/app/db
+      - ./hooks:/app/hooks
+      - ./lib:/app/lib
+      - ./public:/app/public
+      - ./scripts:/app/scripts
+      - ./tests:/app/tests
+      - ./auth.ts:/app/auth.ts
+      - ./components.json:/app/components.json
+      - ./instrumentation.ts:/app/instrumentation.ts
+      - ./next.config.ts:/app/next.config.ts
+      - ./playwright.config.ts:/app/playwright.config.ts
+      - ./postcss.config.mjs:/app/postcss.config.mjs
+      - ./proxy.ts:/app/proxy.ts
+      - ./tailwind.config.ts:/app/tailwind.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
     depends_on:
       seed:
         condition: service_completed_successfully
@@ -84,5 +100,3 @@ services:
 volumes:
   postgres-data:
     name: ${POSTGRES_DATA_VOLUME:-nextstarter_postgres_data}
-  app-node-modules:
-  app-next-cache:

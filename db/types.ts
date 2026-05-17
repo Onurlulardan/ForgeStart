@@ -1,10 +1,15 @@
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
 import type {
   actions,
+  apiKeys,
+  appSettings,
+  auditLogs,
+  invitations,
   organizationMembers,
   organizations,
   permissionActions,
   permissions,
+  passwordResetTokens,
   resources,
   roles,
   securityLogs,
@@ -30,9 +35,17 @@ export const PermissionTarget = {
   ORGANIZATION: 'ORGANIZATION',
 } as const;
 
+export const InvitationStatus = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  REVOKED: 'REVOKED',
+  EXPIRED: 'EXPIRED',
+} as const;
+
 export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
 export type OrgStatus = (typeof OrgStatus)[keyof typeof OrgStatus];
 export type PermissionTarget = (typeof PermissionTarget)[keyof typeof PermissionTarget];
+export type InvitationStatus = (typeof InvitationStatus)[keyof typeof InvitationStatus];
 
 export type User = InferSelectModel<typeof users>;
 export type NewUser = InferInsertModel<typeof users>;
@@ -45,3 +58,8 @@ export type PermissionAction = InferSelectModel<typeof permissionActions>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type OrganizationMember = InferSelectModel<typeof organizationMembers>;
 export type SecurityLog = InferSelectModel<typeof securityLogs>;
+export type AppSetting = InferSelectModel<typeof appSettings>;
+export type ApiKey = InferSelectModel<typeof apiKeys>;
+export type Invitation = InferSelectModel<typeof invitations>;
+export type PasswordResetToken = InferSelectModel<typeof passwordResetTokens>;
+export type AuditLog = InferSelectModel<typeof auditLogs>;

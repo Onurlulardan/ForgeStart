@@ -101,6 +101,7 @@ export default function SecurityLogsPage() {
             dataSource={logs}
             loading={loading}
             rowKey="id"
+            storageKey="admin-security-logs"
             pageSize={20}
           />
         </CardContent>

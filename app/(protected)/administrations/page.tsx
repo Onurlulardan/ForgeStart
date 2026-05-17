@@ -5,11 +5,16 @@ import { redirect } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   ArrowRightIcon,
+  ActivityIcon,
+  AppWindowIcon,
   Building2Icon,
+  ClipboardListIcon,
   KeyRoundIcon,
   LockKeyholeIcon,
   ShieldCheckIcon,
+  SlidersHorizontalIcon,
   UserCogIcon,
+  UserPlusIcon,
   UsersIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -56,11 +61,46 @@ const adminCards = [
     icon: KeyRoundIcon,
   },
   {
+    title: 'RBAC matrix',
+    description: 'Edit role grants across resources and actions in a compact matrix.',
+    href: '/administrations/rbac',
+    permission: ['permission', 'edit'],
+    icon: ClipboardListIcon,
+  },
+  {
+    title: 'Invitations',
+    description: 'Invite users with role and organization assignment.',
+    href: '/administrations/invitations',
+    permission: ['invitation', 'view'],
+    icon: UserPlusIcon,
+  },
+  {
+    title: 'API keys',
+    description: 'Issue scoped service credentials for integrations.',
+    href: '/administrations/api-keys',
+    permission: ['api-key', 'view'],
+    icon: AppWindowIcon,
+  },
+  {
     title: 'Security logs',
     description: 'Review authentication attempts and security-relevant events.',
     href: '/administrations/security-logs',
     permission: ['security-log', 'view'],
     icon: LockKeyholeIcon,
+  },
+  {
+    title: 'Audit logs',
+    description: 'Review operational changes across admin workflows.',
+    href: '/administrations/audit-logs',
+    permission: ['audit-log', 'view'],
+    icon: ActivityIcon,
+  },
+  {
+    title: 'System center',
+    description: 'Check health, migration status, setup doctor and app settings.',
+    href: '/administrations/system',
+    permission: ['system', 'view'],
+    icon: SlidersHorizontalIcon,
   },
 ] as const;
 
@@ -83,13 +123,23 @@ export default function AdministrationsPage() {
   const canViewOrganizations = usePermission('organization', 'view');
   const canViewRoles = usePermission('role', 'view');
   const canViewPermissions = usePermission('permission', 'view');
+  const canEditPermissions = usePermission('permission', 'edit');
   const canViewSecurityLogs = usePermission('security-log', 'view');
+  const canViewInvitations = usePermission('invitation', 'view');
+  const canViewApiKeys = usePermission('api-key', 'view');
+  const canViewAuditLogs = usePermission('audit-log', 'view');
+  const canViewSystem = usePermission('system', 'view');
   const permissions = {
     user: canViewUsers,
     organization: canViewOrganizations,
     role: canViewRoles,
     permission: canViewPermissions,
+    'permission:edit': canEditPermissions,
     'security-log': canViewSecurityLogs,
+    invitation: canViewInvitations,
+    'api-key': canViewApiKeys,
+    'audit-log': canViewAuditLogs,
+    system: canViewSystem,
   };
 
   if (!session?.user) {
@@ -140,7 +190,11 @@ export default function AdministrationsPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {adminCards
-          .filter((card) => permissions[card.permission[0]])
+          .filter((card) =>
+            card.permission[1] === 'edit'
+              ? permissions[`${card.permission[0]}:edit` as keyof typeof permissions]
+              : permissions[card.permission[0] as keyof typeof permissions]
+          )
           .map((card) => {
             const Icon = card.icon;
             return (

@@ -7,6 +7,7 @@ import { createNodeDb } from './node';
 import * as schema from './schema';
 import {
   actions,
+  appSettings,
   organizationMembers,
   organizations,
   permissionActions,
@@ -28,7 +29,12 @@ const DEFAULT_RESOURCES = [
   { name: 'PERMISSION', slug: 'permission', description: 'Permission management' },
   { name: 'RESOURCE', slug: 'resource', description: 'Resource management' },
   { name: 'ACTION', slug: 'action', description: 'Action management' },
-  { name: 'SECURITY LOG', slug: 'security_log', description: 'Security audit logs' },
+  { name: 'SECURITY LOG', slug: 'security-log', description: 'Security audit logs' },
+  { name: 'AUDIT LOG', slug: 'audit-log', description: 'Operational audit logs' },
+  { name: 'SETTING', slug: 'setting', description: 'Application settings' },
+  { name: 'API KEY', slug: 'api-key', description: 'API key and service account access' },
+  { name: 'INVITATION', slug: 'invitation', description: 'User invitation workflow' },
+  { name: 'SYSTEM', slug: 'system', description: 'System readiness and health' },
   { name: 'PROFILE', slug: 'profile', description: 'User profile' },
 ];
 
@@ -44,6 +50,51 @@ const DEFAULT_ROLES = [
   { name: 'ADMIN', description: 'Full system access', isDefault: false },
   { name: 'ORGANIZATION ADMIN', description: 'Full organization access', isDefault: false },
   { name: 'MEMBER', description: 'Basic member access', isDefault: true },
+];
+
+const DEFAULT_SETTINGS = [
+  {
+    key: 'app.name',
+    label: 'Application name',
+    value: 'Next Starter V2',
+    description: 'Displayed product name for the starter console',
+    isSecret: false,
+  },
+  {
+    key: 'app.logo_url',
+    label: 'Logo URL',
+    value: '',
+    description: 'Optional hosted logo URL',
+    isSecret: false,
+  },
+  {
+    key: 'app.default_locale',
+    label: 'Default locale',
+    value: 'en',
+    description: 'Default locale for future internationalization',
+    isSecret: false,
+  },
+  {
+    key: 'auth.session_max_age_days',
+    label: 'Session max age',
+    value: '7',
+    description: 'Default session lifetime in days',
+    isSecret: false,
+  },
+  {
+    key: 'email.provider',
+    label: 'Email provider',
+    value: 'dev-console',
+    description: 'Email delivery provider key',
+    isSecret: false,
+  },
+  {
+    key: 'storage.provider',
+    label: 'Storage provider',
+    value: 'url',
+    description: 'Storage strategy for uploaded assets',
+    isSecret: false,
+  },
 ];
 
 async function upsertResource(db: Db, value: (typeof DEFAULT_RESOURCES)[number]) {
@@ -102,6 +153,10 @@ async function upsertGlobalRole(db: Db, value: (typeof DEFAULT_ROLES)[number]) {
 
   const [created] = await db.insert(roles).values(value).returning();
   return created;
+}
+
+async function upsertSetting(db: Db, value: (typeof DEFAULT_SETTINGS)[number]) {
+  await db.insert(appSettings).values(value).onConflictDoNothing({ target: appSettings.key });
 }
 
 async function upsertSuperAdmin(db: Db) {
@@ -199,6 +254,10 @@ export async function seedDatabase(db: Db) {
     const seededRoles = [];
     for (const role of DEFAULT_ROLES) {
       seededRoles.push(await upsertGlobalRole(tx, role));
+    }
+
+    for (const setting of DEFAULT_SETTINGS) {
+      await upsertSetting(tx, setting);
     }
 
     const superAdmin = await upsertSuperAdmin(tx);

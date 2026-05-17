@@ -4,6 +4,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -16,6 +17,12 @@ import {
 export const userStatusEnum = pgEnum('user_status', ['ACTIVE', 'INACTIVE', 'SUSPENDED']);
 export const orgStatusEnum = pgEnum('org_status', ['ACTIVE', 'INACTIVE', 'SUSPENDED']);
 export const permissionTargetEnum = pgEnum('permission_target', ['USER', 'ROLE', 'ORGANIZATION']);
+export const invitationStatusEnum = pgEnum('invitation_status', [
+  'PENDING',
+  'ACCEPTED',
+  'REVOKED',
+  'EXPIRED',
+]);
 
 const timestamps = {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
@@ -277,6 +284,122 @@ export const securityLogs = pgTable(
   })
 );
 
+export const appSettings = pgTable(
+  'app_settings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    key: text('key').notNull(),
+    value: text('value').notNull(),
+    label: text('label').notNull(),
+    description: text('description'),
+    isSecret: boolean('is_secret').notNull().default(false),
+    updatedById: uuid('updated_by_id').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => ({
+    keyIdx: uniqueIndex('app_settings_key_idx').on(table.key),
+  })
+);
+
+export const apiKeys = pgTable(
+  'api_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    keyPrefix: text('key_prefix').notNull(),
+    keyHash: text('key_hash').notNull(),
+    scopes: jsonb('scopes')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
+    lastUsedAt: timestamp('last_used_at', { mode: 'date' }),
+    expiresAt: timestamp('expires_at', { mode: 'date' }),
+    revokedAt: timestamp('revoked_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => ({
+    keyHashIdx: uniqueIndex('api_keys_key_hash_idx').on(table.keyHash),
+    keyPrefixIdx: index('api_keys_key_prefix_idx').on(table.keyPrefix),
+    createdByIdx: index('api_keys_created_by_id_idx').on(table.createdById),
+    revokedAtIdx: index('api_keys_revoked_at_idx').on(table.revokedAt),
+  })
+);
+
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    status: invitationStatusEnum('status').notNull().default('PENDING'),
+    roleId: uuid('role_id').references(() => roles.id, { onDelete: 'set null' }),
+    organizationId: uuid('organization_id').references(() => organizations.id, {
+      onDelete: 'set null',
+    }),
+    invitedById: uuid('invited_by_id').references(() => users.id, { onDelete: 'set null' }),
+    acceptedById: uuid('accepted_by_id').references(() => users.id, { onDelete: 'set null' }),
+    expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+    acceptedAt: timestamp('accepted_at', { mode: 'date' }),
+    revokedAt: timestamp('revoked_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => ({
+    emailIdx: index('invitations_email_idx').on(table.email),
+    tokenHashIdx: uniqueIndex('invitations_token_hash_idx').on(table.tokenHash),
+    statusIdx: index('invitations_status_idx').on(table.status),
+    roleIdx: index('invitations_role_id_idx').on(table.roleId),
+    organizationIdx: index('invitations_organization_id_idx').on(table.organizationId),
+  })
+);
+
+export const passwordResetTokens = pgTable(
+  'password_reset_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+    usedAt: timestamp('used_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => ({
+    tokenHashIdx: uniqueIndex('password_reset_tokens_token_hash_idx').on(table.tokenHash),
+    userIdx: index('password_reset_tokens_user_id_idx').on(table.userId),
+    usedAtIdx: index('password_reset_tokens_used_at_idx').on(table.usedAt),
+  })
+);
+
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    actorEmail: text('actor_email'),
+    action: text('action').notNull(),
+    resource: text('resource').notNull(),
+    resourceId: text('resource_id'),
+    status: text('status').notNull().default('SUCCESS'),
+    message: text('message').notNull(),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    ipAddress: text('ip_address').notNull().default('0.0.0.0'),
+    userAgent: text('user_agent').notNull().default('Unknown'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => ({
+    actorIdx: index('audit_logs_actor_id_idx').on(table.actorId),
+    createdAtIdx: index('audit_logs_created_at_idx').on(table.createdAt),
+    actionIdx: index('audit_logs_action_idx').on(table.action),
+    resourceIdx: index('audit_logs_resource_idx').on(table.resource),
+    statusIdx: index('audit_logs_status_idx').on(table.status),
+  })
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
@@ -284,6 +407,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   organizationMemberships: many(organizationMembers),
   permissions: many(permissions),
   securityLogs: many(securityLogs),
+  auditLogs: many(auditLogs),
 }));
 
 export const rolesRelations = relations(roles, ({ one, many }) => ({

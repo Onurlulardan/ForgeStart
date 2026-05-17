@@ -127,3 +127,62 @@ export const addUsersToOrganizationSchema = z.object({
   userIds: z.array(uuid).min(1),
   roleId: nullableUuid,
 });
+
+export const settingUpdateSchema = z.object({
+  settings: z
+    .array(
+      z.object({
+        key: z.string().trim().min(2),
+        value: z.string().trim().max(2000),
+      })
+    )
+    .min(1),
+});
+
+export const apiKeyCreateSchema = z.object({
+  name: z.string().trim().min(3).max(120),
+  scopes: z.array(z.string().trim().min(1)).default([]),
+  expiresAt: z
+    .string()
+    .datetime()
+    .optional()
+    .transform((value) => (value ? new Date(value) : null)),
+});
+
+export const invitationCreateSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email()
+    .transform((value) => value.toLowerCase()),
+  roleId: nullableUuid,
+  organizationId: nullableUuid,
+  expiresInDays: z.number().int().min(1).max(90).default(7),
+});
+
+export const inviteAcceptSchema = z.object({
+  token: z.string().trim().min(20),
+  password: z.string().min(8),
+  firstName: z.string().trim().optional().default(''),
+  lastName: z.string().trim().optional().default(''),
+});
+
+export const passwordResetRequestSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email()
+    .transform((value) => value.toLowerCase()),
+});
+
+export const passwordResetConfirmSchema = z.object({
+  token: z.string().trim().min(20),
+  password: z.string().min(8),
+});
+
+export const rbacMatrixUpdateSchema = z.object({
+  roleId: uuid,
+  resourceId: uuid,
+  actionId: uuid,
+  enabled: z.boolean(),
+});

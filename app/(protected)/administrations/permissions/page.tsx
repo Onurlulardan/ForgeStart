@@ -353,6 +353,7 @@ export default function PermissionsPage() {
                 dataSource={permissions}
                 loading={loading}
                 rowKey="id"
+                storageKey="admin-permissions"
                 onRowDoubleClick={
                   canEditPermission
                     ? (record) => {
@@ -369,6 +370,7 @@ export default function PermissionsPage() {
                 dataSource={resources}
                 loading={loading}
                 rowKey="id"
+                storageKey="admin-resources"
                 onRowDoubleClick={
                   canEditResource
                     ? (record) => {
@@ -385,6 +387,7 @@ export default function PermissionsPage() {
                 dataSource={actions}
                 loading={loading}
                 rowKey="id"
+                storageKey="admin-actions"
                 onRowDoubleClick={
                   canEditAction
                     ? (record) => {
