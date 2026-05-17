@@ -18,6 +18,7 @@
     "loading": "Loading...",
     "saving": "Saving...",
     "working": "Working...",
+    "retry": "Try again",
     "noData": "No data",
     "yes": "Yes",
     "no": "No",
@@ -55,7 +56,24 @@
   "nav": {
     "dashboard": "Dashboard",
     "administration": "Administration",
-    "menu": "Menu"
+    "menu": "Menu",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "sidebarTagline": "v2 operations console",
+    "topbarTagline": "Drizzle, Auth.js, TanStack and PostgreSQL starter",
+    "localFirstTitle": "Local-first starter",
+    "localFirstDescription": "Docker, Drizzle, Auth.js and TanStack are wired for clone-to-run development."
+  },
+  "home": {
+    "headline": "{appName} ships the production pieces your Next.js app needs.",
+    "description": "A maintained V2 foundation for teams that want Auth.js, Drizzle, PostgreSQL, Docker and a real admin console instead of an empty template.",
+    "openDashboard": "Open dashboard",
+    "signIn": "Sign in",
+    "features": {
+      "drizzleMigrations": "Drizzle migrations",
+      "authSessions": "Auth.js sessions",
+      "dockerWorkflow": "Docker workflow"
+    }
   },
   "userMenu": {
     "profile": "My profile",
@@ -64,7 +82,8 @@
     "language": "Language",
     "lightMode": "Light",
     "darkMode": "Dark",
-    "systemMode": "System"
+    "systemMode": "System",
+    "avatarAlt": "User"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -77,7 +96,17 @@
     "resetPasswordDescription": "Choose a new password.",
     "acceptInviteTitle": "Accept invitation",
     "acceptInviteDescription": "Create your account and join the organization.",
+    "emailVerificationTitle": "Email verification",
+    "emailVerificationDescription": "We're confirming your email address.",
+    "welcomeBackTitle": "Welcome back",
+    "loginHeroDescription": "A professional {appName} console with Auth.js, Drizzle, PostgreSQL and Docker-first local development.",
+    "loginWorkspaceDescription": "Sign in to manage your {appName} workspace.",
+    "registerHeroTitle": "Start from a real app",
+    "registerHeroDescription": "Clone, compose up, migrate, seed and ship with the {appName} baseline.",
+    "registerHeroCallout": "Production-like database, authentication and authorization flows are already wired.",
+    "registerWorkspaceDescription": "Use {appName} as a clean foundation for your team.",
     "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
     "passwordLabel": "Password",
     "newPasswordLabel": "New password",
     "currentPasswordLabel": "Current password",
@@ -85,6 +114,7 @@
     "firstNameLabel": "First name",
     "lastNameLabel": "Last name",
     "phoneLabel": "Phone",
+    "tokenLabel": "Token",
     "submitLogin": "Sign in",
     "submitRegister": "Create account",
     "submitReset": "Reset password",
@@ -169,6 +199,7 @@
       "scopeGlobal": "Global",
       "scopeOrganization": "Organization",
       "isDefault": "Default role",
+      "scopeDescription": "Global roles apply across all organizations.",
       "columns": {
         "name": "Name",
         "scope": "Scope",
@@ -274,6 +305,7 @@
       "title": "System Settings",
       "description": "Manage application configuration.",
       "saveButton": "Save settings",
+      "refreshButton": "Refresh",
       "saved": "Settings updated",
       "settingsDescription": "Project defaults that commonly change after cloning.",
       "runtimeDescription": "Live app and database metadata.",
@@ -317,15 +349,24 @@
         "local": "local",
         "none": "none"
       },
+      "logoUpload": {
+        "defaultLogo": "Default ForgeStart logo",
+        "customLogo": "Custom logo selected",
+        "previewAlt": "Application logo",
+        "previewDescription": "This logo is used in the sidebar and public auth screens.",
+        "hint": "PNG, JPG, WebP, or SVG up to 5 MB.",
+        "uploading": "Uploading... {progress}%",
+        "useDefault": "Use default logo"
+      },
       "settingsLabels": {
         "app": {
           "name": {
             "label": "Application name",
-            "description": "Displayed product name for the ForgeStart console"
+            "description": "Displayed product name for the console"
           },
           "logo_url": {
-            "label": "Logo URL",
-            "description": "Optional hosted logo URL"
+            "label": "Application logo",
+            "description": "Upload a logo or keep the default ForgeStart mark."
           },
           "default_locale": {
             "label": "Default locale",
@@ -342,6 +383,12 @@
           "provider": {
             "label": "Email provider",
             "description": "Active email delivery provider (console / resend / smtp)"
+          }
+        },
+        "storage": {
+          "provider": {
+            "label": "Storage provider",
+            "description": "Storage strategy for uploaded assets"
           }
         },
         "system": {
@@ -386,6 +433,26 @@
         "exportJson": "Export JSON",
         "importJson": "Import JSON",
         "resetLocal": "Reset local"
+      },
+      "radius": "Radius",
+      "fontFamily": "Font family",
+      "preview": {
+        "title": "Preview",
+        "description": "Live components reflecting current tokens.",
+        "buttons": {
+          "primary": "Primary",
+          "secondary": "Secondary",
+          "outline": "Outline",
+          "ghost": "Ghost",
+          "destructive": "Destructive"
+        },
+        "badges": {
+          "default": "Default",
+          "secondary": "Secondary",
+          "outline": "Outline",
+          "destructive": "Destructive"
+        },
+        "inputPlaceholder": "Input sample"
       }
     }
   },
@@ -397,7 +464,31 @@
     "uploading": "Uploading...",
     "uploadFailed": "Upload failed",
     "removeConfirmTitle": "Delete file",
-    "removeConfirmDescription": "This file will be permanently removed from storage and database."
+    "removeConfirmDescription": "This file will be permanently removed from storage and database.",
+    "removeFile": "Remove file"
+  },
+  "richText": {
+    "toolbar": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "strike": "Strike",
+      "heading1": "Heading 1",
+      "heading2": "Heading 2",
+      "heading3": "Heading 3",
+      "bulletList": "Bullet list",
+      "orderedList": "Ordered list",
+      "blockquote": "Blockquote",
+      "codeBlock": "Code block",
+      "image": "Image",
+      "undo": "Undo",
+      "redo": "Redo"
+    },
+    "link": {
+      "label": "Link",
+      "placeholder": "https://example.com",
+      "apply": "Apply",
+      "remove": "Remove link"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -423,6 +514,10 @@
     "totalRecords": "{count, plural, =0 {0 records} =1 {# record total} other {# records total}}",
     "perPage": "{size} per page",
     "page": "Page {page} of {total}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "selectAllRows": "Select all rows",
+    "selectRow": "Select row",
     "rowsSelected": "{count, plural, =0 {No rows selected} =1 {# row selected} other {# rows selected}}",
     "noRecords": "No records found",
     "loading": "Loading..."

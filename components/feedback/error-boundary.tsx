@@ -2,6 +2,7 @@
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangleIcon, RefreshCwIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 
 interface ErrorBoundaryProps {
@@ -39,18 +40,21 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 }
 
 function DefaultErrorFallback({ error, reset }: { error: Error; reset: () => void }) {
+  const tErrors = useTranslations('errors');
+  const tCommon = useTranslations('common');
+
   return (
     <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-6 py-12 text-center">
       <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
         <AlertTriangleIcon className="size-6" />
       </div>
       <div className="space-y-1">
-        <h3 className="text-base font-medium text-foreground">Bir hata oluştu</h3>
+        <h3 className="text-base font-medium text-foreground">{tErrors('generic')}</h3>
         <p className="max-w-md text-sm text-muted-foreground">{error.message}</p>
       </div>
       <Button variant="outline" onClick={reset}>
         <RefreshCwIcon />
-        Tekrar dene
+        {tCommon('retry')}
       </Button>
     </div>
   );

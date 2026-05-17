@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 import { MoreHorizontalIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -24,10 +25,11 @@ interface EntityActionsProps {
 }
 
 export function EntityActions({ actions }: EntityActionsProps) {
+  const tCommon = useTranslations('common');
   const enabledActions = actions.filter((action) => !action.disabled);
 
   if (!enabledActions.length) {
-    return <span className="text-xs text-muted-foreground">No actions</span>;
+    return <span className="text-xs text-muted-foreground">{tCommon('noActions')}</span>;
   }
 
   return (

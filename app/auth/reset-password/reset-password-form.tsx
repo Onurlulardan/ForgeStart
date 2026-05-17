@@ -35,7 +35,7 @@ export default function ResetPasswordForm() {
       }}
       onSubmit={submit}
     >
-      <FormField<PasswordResetConfirmInput> name="token" label="Token">
+      <FormField<PasswordResetConfirmInput> name="token" label={t('tokenLabel')}>
         {(field) => (
           <InputGroup>
             <InputGroupAddon>

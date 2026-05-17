@@ -56,7 +56,7 @@ export default function LoginForm() {
               id={field.name}
               type="email"
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder={t('emailPlaceholder')}
               value={(field.value as string | undefined) ?? ''}
               onChange={(event) => field.onChange(event.target.value)}
               onBlur={field.onBlur}

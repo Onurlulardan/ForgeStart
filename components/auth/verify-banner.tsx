@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 export function VerifyEmailBanner() {
   const { data: session } = useSession();
   const t = useTranslations('auth');
+  const tCommon = useTranslations('common');
   const [dismissed, setDismissed] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -44,7 +45,7 @@ export function VerifyEmailBanner() {
         <Button
           size="icon-sm"
           variant="ghost"
-          aria-label="dismiss"
+          aria-label={tCommon('close')}
           onClick={() => setDismissed(true)}
         >
           <XIcon />

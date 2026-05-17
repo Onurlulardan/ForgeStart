@@ -1,63 +1,62 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 import { ArrowRightIcon, DatabaseIcon, ShieldCheckIcon, TerminalIcon } from 'lucide-react';
+import { BrandLogo } from '@/components/brand';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { loadAppBranding } from '@/lib/branding/server';
 
-const features = [
-  { label: 'Drizzle migrations', icon: DatabaseIcon },
-  { label: 'Auth.js sessions', icon: ShieldCheckIcon },
-  { label: 'Docker workflow', icon: TerminalIcon },
+export const dynamic = 'force-dynamic';
+
+const featureItems = [
+  { key: 'drizzleMigrations', icon: DatabaseIcon },
+  { key: 'authSessions', icon: ShieldCheckIcon },
+  { key: 'dockerWorkflow', icon: TerminalIcon },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const [t, branding] = await Promise.all([getTranslations('home'), loadAppBranding()]);
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,var(--accent),transparent_34rem),var(--background)] px-4 py-10">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl flex-col justify-center gap-8">
         <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <div className="mb-6 flex items-center gap-3">
-              <Image
-                src="/brand/forgestart-mark.svg"
-                alt=""
-                width={44}
-                height={44}
-                className="size-11"
-                priority
-              />
-              <span className="text-sm font-semibold text-muted-foreground">ForgeStart</span>
+              <BrandLogo logoUrl={branding.logoUrl} name={branding.name} className="size-11" />
+              <span className="text-sm font-semibold text-muted-foreground">{branding.name}</span>
             </div>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-              ForgeStart ships the production pieces your Next.js app needs.
+              {t('headline', { appName: branding.name })}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
-              A maintained V2 foundation for teams that want Auth.js, Drizzle, PostgreSQL, Docker
-              and a real admin console instead of an empty template.
+              {t('description')}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button render={<Link href="/dashboard" />} size="lg">
-                Open dashboard
+                {t('openDashboard')}
                 <ArrowRightIcon data-icon="inline-end" />
               </Button>
               <Button render={<Link href="/auth/login" />} variant="outline" size="lg">
-                Sign in
+                {t('signIn')}
               </Button>
             </div>
           </div>
 
           <Card className="rounded-lg border bg-card/90 shadow-sm">
             <CardContent className="grid gap-3 p-4">
-              {features.map((feature) => {
+              {featureItems.map((feature) => {
                 const Icon = feature.icon;
+                const label = t(`features.${feature.key}`);
                 return (
                   <div
-                    key={feature.label}
+                    key={feature.key}
                     className="flex items-center gap-3 rounded-lg border bg-background p-4"
                   >
                     <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                       <Icon className="size-4" />
                     </div>
-                    <span className="text-sm font-medium">{feature.label}</span>
+                    <span className="text-sm font-medium">{label}</span>
                   </div>
                 );
               })}

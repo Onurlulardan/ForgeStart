@@ -28,7 +28,7 @@ export function PageShell({
   return (
     <div className={cn('flex flex-col gap-6', className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <nav className="flex items-center gap-1 text-sm text-muted-foreground">
           {breadcrumbs.map((crumb, index) => {
             const isLast = index === breadcrumbs.length - 1;
             return (

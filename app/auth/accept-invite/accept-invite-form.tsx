@@ -34,7 +34,7 @@ export default function AcceptInviteForm() {
       }}
       onSubmit={submit}
     >
-      <FormField<InviteAcceptInput> name="token" label="Token">
+      <FormField<InviteAcceptInput> name="token" label={t('tokenLabel')}>
         {(field) => (
           <InputGroup>
             <InputGroupAddon>

@@ -1,14 +1,16 @@
 'use client';
 
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboardIcon, ShieldCheckIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { BrandLogo } from '@/components/brand';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
+import type { AppBranding } from '@/lib/branding/constants';
 
 interface SidebarProps {
   collapsed: boolean;
+  branding: AppBranding;
 }
 
 const navItems = [
@@ -24,7 +26,7 @@ const navItems = [
   },
 ] as const;
 
-export default function Sidebar({ collapsed }: SidebarProps) {
+export default function Sidebar({ collapsed, branding }: SidebarProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
 
@@ -36,11 +38,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       )}
     >
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-        <Image src="/brand/forgestart-mark.svg" alt="" width={36} height={36} className="size-9" />
+        <BrandLogo logoUrl={branding.logoUrl} name={branding.name} className="size-9" />
         {!collapsed && (
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">ForgeStart</p>
-            <p className="truncate text-xs text-sidebar-foreground/60">v2 operations console</p>
+            <p className="truncate text-sm font-semibold">{branding.name}</p>
+            <p className="truncate text-xs text-sidebar-foreground/60">{t('sidebarTagline')}</p>
           </div>
         )}
       </div>
@@ -74,9 +76,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       <div className="border-t border-sidebar-border p-4">
         {!collapsed ? (
           <div className="rounded-lg bg-sidebar-accent/60 p-3">
-            <p className="text-xs font-medium">Local-first starter</p>
+            <p className="text-xs font-medium">{t('localFirstTitle')}</p>
             <p className="mt-1 text-xs leading-5 text-sidebar-foreground/60">
-              Docker, Drizzle, Auth.js & TanStack are wired for clone-to-run development.
+              {t('localFirstDescription')}
             </p>
           </div>
         ) : (

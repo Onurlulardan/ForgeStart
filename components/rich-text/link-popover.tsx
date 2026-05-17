@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { LinkIcon, Trash2Icon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ToolbarButton } from './toolbar-button';
@@ -12,6 +13,8 @@ interface LinkPopoverProps {
 }
 
 export function LinkPopover({ editor }: LinkPopoverProps) {
+  const t = useTranslations('richText.link');
+  const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
 
@@ -35,7 +38,7 @@ export function LinkPopover({ editor }: LinkPopoverProps) {
           setValue(current);
           setOpen((prev) => !prev);
         }}
-        aria-label="Link"
+        aria-label={t('label')}
       >
         <LinkIcon className="size-4" />
       </ToolbarButton>
@@ -43,7 +46,7 @@ export function LinkPopover({ editor }: LinkPopoverProps) {
         <div className="absolute top-full left-0 z-30 mt-2 w-72 rounded-lg border bg-popover p-3 shadow-md">
           <Input
             autoFocus
-            placeholder="https://example.com"
+            placeholder={t('placeholder')}
             value={value}
             onChange={(event) => setValue(event.target.value)}
             onKeyDown={(event) => {
@@ -62,15 +65,16 @@ export function LinkPopover({ editor }: LinkPopoverProps) {
                   editor.chain().focus().unsetLink().run();
                   setOpen(false);
                 }}
+                aria-label={t('remove')}
               >
                 <Trash2Icon />
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button size="sm" onClick={apply}>
-              Apply
+              {t('apply')}
             </Button>
           </div>
         </div>

@@ -18,6 +18,7 @@
     "loading": "Yükleniyor...",
     "saving": "Kaydediliyor...",
     "working": "İşleniyor...",
+    "retry": "Tekrar dene",
     "noData": "Veri bulunamadı",
     "yes": "Evet",
     "no": "Hayır",
@@ -55,7 +56,24 @@
   "nav": {
     "dashboard": "Pano",
     "administration": "Yönetim",
-    "menu": "Menü"
+    "menu": "Menü",
+    "expandSidebar": "Kenar çubuğunu genişlet",
+    "collapseSidebar": "Kenar çubuğunu daralt",
+    "sidebarTagline": "v2 operasyon konsolu",
+    "topbarTagline": "Drizzle, Auth.js, TanStack ve PostgreSQL starter",
+    "localFirstTitle": "Yerel öncelikli starter",
+    "localFirstDescription": "Docker, Drizzle, Auth.js ve TanStack clone-and-run geliştirme için hazır bağlı gelir."
+  },
+  "home": {
+    "headline": "{appName}, Next.js uygulamanın ihtiyaç duyduğu üretim parçalarıyla gelir.",
+    "description": "Auth.js, Drizzle, PostgreSQL, Docker ve gerçek bir yönetim konsolu isteyen ekipler için bakımı yapılmış V2 temel.",
+    "openDashboard": "Panoyu aç",
+    "signIn": "Giriş yap",
+    "features": {
+      "drizzleMigrations": "Drizzle migrasyonları",
+      "authSessions": "Auth.js oturumları",
+      "dockerWorkflow": "Docker akışı"
+    }
   },
   "userMenu": {
     "profile": "Profilim",
@@ -64,7 +82,8 @@
     "language": "Dil",
     "lightMode": "Açık tema",
     "darkMode": "Koyu tema",
-    "systemMode": "Sistem"
+    "systemMode": "Sistem",
+    "avatarAlt": "Kullanıcı"
   },
   "auth": {
     "loginTitle": "Giriş Yap",
@@ -77,7 +96,17 @@
     "resetPasswordDescription": "Yeni şifrenizi belirleyin.",
     "acceptInviteTitle": "Daveti Kabul Et",
     "acceptInviteDescription": "Hesabınızı oluşturarak organizasyona katılın.",
+    "emailVerificationTitle": "E-posta doğrulama",
+    "emailVerificationDescription": "E-posta adresinizi doğruluyoruz.",
+    "welcomeBackTitle": "Tekrar hoş geldiniz",
+    "loginHeroDescription": "Auth.js, Drizzle, PostgreSQL ve Docker-first yerel geliştirme ile gelen profesyonel {appName} konsolu.",
+    "loginWorkspaceDescription": "{appName} çalışma alanını yönetmek için giriş yapın.",
+    "registerHeroTitle": "Gerçek bir uygulamadan başlayın",
+    "registerHeroDescription": "Clone, compose up, migrate, seed ve ship akışı {appName} temeliyle hazır.",
+    "registerHeroCallout": "Üretime yakın veritabanı, kimlik doğrulama ve yetkilendirme akışları hazır bağlı gelir.",
+    "registerWorkspaceDescription": "{appName} temeliyle ekibiniz için temiz bir başlangıç yapın.",
     "emailLabel": "E-posta",
+    "emailPlaceholder": "ornek@eposta.com",
     "passwordLabel": "Şifre",
     "newPasswordLabel": "Yeni şifre",
     "currentPasswordLabel": "Mevcut şifre",
@@ -85,6 +114,7 @@
     "firstNameLabel": "Ad",
     "lastNameLabel": "Soyad",
     "phoneLabel": "Telefon",
+    "tokenLabel": "Token",
     "submitLogin": "Giriş yap",
     "submitRegister": "Kayıt ol",
     "submitReset": "Şifreyi sıfırla",
@@ -169,6 +199,7 @@
       "scopeGlobal": "Global",
       "scopeOrganization": "Organizasyon",
       "isDefault": "Varsayılan rol",
+      "scopeDescription": "Global roller tüm organizasyonlarda geçerlidir.",
       "columns": {
         "name": "Ad",
         "scope": "Kapsam",
@@ -274,6 +305,7 @@
       "title": "Sistem Ayarları",
       "description": "Uygulama yapılandırmasını yönetin.",
       "saveButton": "Ayarları kaydet",
+      "refreshButton": "Yenile",
       "saved": "Ayarlar güncellendi",
       "settingsDescription": "Klonladıktan sonra sıkça değiştirilen proje varsayılanları.",
       "runtimeDescription": "Canlı uygulama ve veritabanı meta verisi.",
@@ -317,15 +349,24 @@
         "local": "yerel",
         "none": "yok"
       },
+      "logoUpload": {
+        "defaultLogo": "Varsayılan ForgeStart logosu",
+        "customLogo": "Özel logo seçildi",
+        "previewAlt": "Uygulama logosu",
+        "previewDescription": "Bu logo kenar çubuğunda ve herkese açık auth ekranlarında kullanılır.",
+        "hint": "5 MB'a kadar PNG, JPG, WebP veya SVG.",
+        "uploading": "Yükleniyor... {progress}%",
+        "useDefault": "Varsayılan logoyu kullan"
+      },
       "settingsLabels": {
         "app": {
           "name": {
             "label": "Uygulama adı",
-            "description": "ForgeStart konsolunda gösterilen ürün adı"
+            "description": "Konsolda gösterilen ürün adı"
           },
           "logo_url": {
-            "label": "Logo URL",
-            "description": "İsteğe bağlı barındırılan logo URL"
+            "label": "Uygulama logosu",
+            "description": "Logo yükleyin veya varsayılan ForgeStart işaretini kullanın."
           },
           "default_locale": {
             "label": "Varsayılan dil",
@@ -342,6 +383,12 @@
           "provider": {
             "label": "E-posta sağlayıcısı",
             "description": "Aktif e-posta gönderim sağlayıcısı (console / resend / smtp)"
+          }
+        },
+        "storage": {
+          "provider": {
+            "label": "Depolama sağlayıcısı",
+            "description": "Yüklenen varlıklar için depolama stratejisi"
           }
         },
         "system": {
@@ -386,6 +433,26 @@
         "exportJson": "JSON dışa aktar",
         "importJson": "JSON içe aktar",
         "resetLocal": "Yerel sıfırla"
+      },
+      "radius": "Köşe yarıçapı",
+      "fontFamily": "Yazı tipi ailesi",
+      "preview": {
+        "title": "Ön izleme",
+        "description": "Geçerli token'ları kullanan canlı bileşenler.",
+        "buttons": {
+          "primary": "Birincil",
+          "secondary": "İkincil",
+          "outline": "Çerçeveli",
+          "ghost": "Şeffaf",
+          "destructive": "Yıkıcı"
+        },
+        "badges": {
+          "default": "Varsayılan",
+          "secondary": "İkincil",
+          "outline": "Çerçeveli",
+          "destructive": "Yıkıcı"
+        },
+        "inputPlaceholder": "Input örneği"
       }
     }
   },
@@ -397,7 +464,31 @@
     "uploading": "Yükleniyor...",
     "uploadFailed": "Yükleme başarısız",
     "removeConfirmTitle": "Dosyayı sil",
-    "removeConfirmDescription": "Bu dosya disk ve veritabanından kalıcı olarak silinecek."
+    "removeConfirmDescription": "Bu dosya disk ve veritabanından kalıcı olarak silinecek.",
+    "removeFile": "Dosyayı kaldır"
+  },
+  "richText": {
+    "toolbar": {
+      "bold": "Kalın",
+      "italic": "İtalik",
+      "strike": "Üstü çizili",
+      "heading1": "Başlık 1",
+      "heading2": "Başlık 2",
+      "heading3": "Başlık 3",
+      "bulletList": "Madde listesi",
+      "orderedList": "Numaralı liste",
+      "blockquote": "Alıntı",
+      "codeBlock": "Kod bloğu",
+      "image": "Görsel",
+      "undo": "Geri al",
+      "redo": "Yinele"
+    },
+    "link": {
+      "label": "Bağlantı",
+      "placeholder": "https://ornek.com",
+      "apply": "Uygula",
+      "remove": "Bağlantıyı kaldır"
+    }
   },
   "dashboard": {
     "title": "Pano",
@@ -423,6 +514,10 @@
     "totalRecords": "{count, plural, =0 {Toplam 0 kayıt} other {Toplam # kayıt}}",
     "perPage": "Sayfa başına {size}",
     "page": "Sayfa {page} / {total}",
+    "previousPage": "Önceki sayfa",
+    "nextPage": "Sonraki sayfa",
+    "selectAllRows": "Tüm satırları seç",
+    "selectRow": "Satırı seç",
     "rowsSelected": "{count, plural, =0 {Satır seçilmedi} other {# satır seçildi}}",
     "noRecords": "Kayıt bulunamadı",
     "loading": "Yükleniyor..."

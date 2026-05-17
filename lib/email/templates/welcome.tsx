@@ -1,4 +1,5 @@
 import { Text } from '@react-email/components';
+import { DEFAULT_APP_NAME } from '@/lib/branding/constants';
 import { EmailLayout } from './layout';
 
 export interface WelcomeEmailProps {
@@ -10,7 +11,7 @@ export interface WelcomeEmailProps {
 export function WelcomeEmail({
   recipientName,
   appUrl,
-  appName = 'ForgeStart',
+  appName = DEFAULT_APP_NAME,
 }: WelcomeEmailProps) {
   return (
     <EmailLayout

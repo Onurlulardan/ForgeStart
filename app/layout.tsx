@@ -3,10 +3,11 @@ import { getLocale, getMessages } from 'next-intl/server';
 import './globals.css';
 import { Providers } from './providers';
 import { loadSystemTheme } from './actions/theme';
+import { DEFAULT_APP_NAME } from '@/lib/branding/constants';
 import type { ThemeTokens } from '@/lib/theme';
 
 export const metadata: Metadata = {
-  title: 'ForgeStart',
+  title: DEFAULT_APP_NAME,
   description: 'Production-ready Next.js, Auth.js, Drizzle and PostgreSQL starter template',
   icons: {
     icon: '/favicon.svg',

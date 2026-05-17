@@ -16,6 +16,7 @@ import {
   StrikethroughIcon,
   Undo2Icon,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRef } from 'react';
 import { uploadsApi } from '@/lib/api/client/uploads';
 import { UploadKind } from '@/db/types';
@@ -27,6 +28,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ editor }: ToolbarProps) {
+  const t = useTranslations('richText.toolbar');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,21 +51,21 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         active={editor.isActive('bold')}
-        aria-label="Bold"
+        aria-label={t('bold')}
       >
         <BoldIcon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleItalic().run()}
         active={editor.isActive('italic')}
-        aria-label="Italic"
+        aria-label={t('italic')}
       >
         <ItalicIcon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleStrike().run()}
         active={editor.isActive('strike')}
-        aria-label="Strike"
+        aria-label={t('strike')}
       >
         <StrikethroughIcon className="size-4" />
       </ToolbarButton>
@@ -71,21 +73,21 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
         active={editor.isActive('heading', { level: 1 })}
-        aria-label="H1"
+        aria-label={t('heading1')}
       >
         <Heading1Icon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         active={editor.isActive('heading', { level: 2 })}
-        aria-label="H2"
+        aria-label={t('heading2')}
       >
         <Heading2Icon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
         active={editor.isActive('heading', { level: 3 })}
-        aria-label="H3"
+        aria-label={t('heading3')}
       >
         <Heading3Icon className="size-4" />
       </ToolbarButton>
@@ -93,34 +95,34 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         active={editor.isActive('bulletList')}
-        aria-label="Bullet list"
+        aria-label={t('bulletList')}
       >
         <ListIcon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         active={editor.isActive('orderedList')}
-        aria-label="Ordered list"
+        aria-label={t('orderedList')}
       >
         <ListOrderedIcon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
         active={editor.isActive('blockquote')}
-        aria-label="Blockquote"
+        aria-label={t('blockquote')}
       >
         <QuoteIcon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
         active={editor.isActive('codeBlock')}
-        aria-label="Code block"
+        aria-label={t('codeBlock')}
       >
         <CodeIcon className="size-4" />
       </ToolbarButton>
       <span className="mx-1 h-5 w-px bg-border" />
       <LinkPopover editor={editor} />
-      <ToolbarButton onClick={() => fileInputRef.current?.click()} aria-label="Image">
+      <ToolbarButton onClick={() => fileInputRef.current?.click()} aria-label={t('image')}>
         <ImageIcon className="size-4" />
       </ToolbarButton>
       <input
@@ -134,14 +136,14 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolbarButton
         onClick={() => editor.chain().focus().undo().run()}
         disabled={!editor.can().undo()}
-        aria-label="Undo"
+        aria-label={t('undo')}
       >
         <Undo2Icon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().redo().run()}
         disabled={!editor.can().redo()}
-        aria-label="Redo"
+        aria-label={t('redo')}
       >
         <Redo2Icon className="size-4" />
       </ToolbarButton>

@@ -27,19 +27,21 @@ import { Link } from '@/i18n/navigation';
 import { useTheme } from '@/app/providers';
 import { initials as makeInitials } from '@/lib/formatters';
 import { LanguageSwitcher } from './language-switcher';
+import type { AppBranding } from '@/lib/branding/constants';
 
 interface NavbarProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  branding: AppBranding;
 }
 
 function buildInitials(firstName?: string | null, lastName?: string | null, email?: string | null) {
   const initials = makeInitials([firstName, lastName].filter(Boolean).join(' '));
   if (initials) return initials;
-  return email?.slice(0, 2).toUpperCase() ?? 'NS';
+  return email?.slice(0, 2).toUpperCase() ?? 'FS';
 }
 
-export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
+export default function Navbar({ collapsed, setCollapsed, branding }: NavbarProps) {
   const { data: session } = useSession();
   const { isDark, toggleTheme } = useTheme();
   const t = useTranslations('userMenu');
@@ -56,7 +58,7 @@ export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
             size="icon"
             className="hidden lg:inline-flex"
             onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? tNav('expandSidebar') : tNav('collapseSidebar')}
           >
             {collapsed ? <PanelLeftOpenIcon /> : <PanelLeftCloseIcon />}
           </Button>
@@ -82,9 +84,9 @@ export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
           </DropdownMenu>
 
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-none">Workspace Console</p>
+            <p className="text-sm font-semibold leading-none">{branding.name}</p>
             <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
-              Drizzle, Auth.js, TanStack & PostgreSQL starter
+              {tNav('topbarTagline')}
             </p>
           </div>
         </div>
@@ -103,7 +105,7 @@ export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="ghost" className="h-10 gap-2 px-2" />}>
               <Avatar className="size-7">
-                <AvatarImage src={user?.avatar ?? undefined} alt={user?.email ?? 'User'} />
+                <AvatarImage src={user?.avatar ?? undefined} alt={user?.email ?? t('avatarAlt')} />
                 <AvatarFallback>
                   {buildInitials(user?.firstName, user?.lastName, user?.email)}
                 </AvatarFallback>

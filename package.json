@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node scripts/next-port.mjs dev",
     "dev:all": "concurrently -n next,realtime -c blue,magenta \"yarn dev\" \"yarn realtime:dev\"",
-    "predev": "tsx db/migrate.ts || true",
+    "predev": "node scripts/predev.mjs",
     "realtime:dev": "node scripts/realtime-dev.mjs",
     "realtime:start": "tsx server/index.ts",
     "build": "next build",
@@ -20,6 +20,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "doctor": "node scripts/doctor.mjs",
+    "docker": "node scripts/docker.mjs",
+    "docker:dev": "node scripts/docker-dev.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx db/migrate.ts",
     "db:seed": "tsx db/seed.ts",

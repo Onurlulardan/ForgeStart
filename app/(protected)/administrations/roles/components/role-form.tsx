@@ -63,9 +63,7 @@ export function RoleForm({ initialValues, onSubmit }: RoleFormProps) {
           placeholder={t('scopeGlobal')}
           disabled={loadingOrgs}
         />
-        <FieldDescription>
-          {t('scopeGlobal')} — global roles apply across all organizations.
-        </FieldDescription>
+        <FieldDescription>{t('scopeDescription')}</FieldDescription>
       </Field>
       <FormSwitch name="isDefault" label={t('isDefault')} />
       <SubmitButton className="w-full">

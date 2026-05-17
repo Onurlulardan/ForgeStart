@@ -16,12 +16,12 @@ cd ForgeStart
 corepack enable
 yarn install
 cp .env.example .env
-docker compose --profile dev up --build
+yarn docker dev
 ```
 
-The dev profile starts PostgreSQL, applies Drizzle migrations, seeds base data,
-and starts the Next.js app at `http://localhost:3000` unless `APP_PORT` is
-changed in `.env`.
+The hybrid dev command starts PostgreSQL in Docker, applies Drizzle migrations,
+seeds base data, and then starts the Next.js app on the host with `yarn dev` so
+hot reload stays fast.
 
 ## Stack
 
@@ -83,11 +83,13 @@ yarn test             # Unit/component tests
 yarn test:e2e         # Playwright smoke tests
 yarn verify           # lint + typecheck + test + build
 yarn doctor           # Local setup doctor
+yarn docker dev       # Docker PostgreSQL + migrate/seed + local yarn dev
 ```
 
 Docker shortcuts:
 
 ```bash
+yarn docker:dev       # Same as yarn docker dev
 yarn docker:up        # Start dev profile
 yarn docker:up:build  # Build and start dev profile
 yarn docker:up:prod   # Build and start production-like profile
@@ -122,8 +124,13 @@ The source of truth is `db/schema.ts`. Generated SQL migrations live in
 Development:
 
 ```bash
-yarn docker:up:build
+yarn docker dev
 ```
+
+This is the preferred local development mode on Windows/macOS: PostgreSQL runs
+in Compose, while Next.js runs on the host through `yarn dev` for native hot
+reload. The full Docker dev profile remains available through
+`yarn docker:up:build` when you explicitly want the app container too.
 
 Production-like local run:
 

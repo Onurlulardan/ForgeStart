@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -36,11 +37,12 @@ const FONT_STACKS = [
 ];
 
 export function FontSelector() {
+  const t = useTranslations('admin.theme');
   const { tokens, setFontFamily } = useThemeCustomizer();
   const active = FONT_STACKS.find((font) => font.value === tokens.fontFamily) ?? FONT_STACKS[0];
   return (
     <div className="flex flex-col gap-2">
-      <Label className="text-xs font-medium">Font family</Label>
+      <Label className="text-xs font-medium">{t('fontFamily')}</Label>
       <Select
         value={tokens.fontFamily}
         onValueChange={(value) => {

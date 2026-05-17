@@ -28,8 +28,13 @@ import { PageShell } from '@/components/layout';
 import { Form, FormField, SubmitButton } from '@/components/forms';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { BrandLogo } from '@/components/brand';
+import { FileDropzone } from '@/components/uploads';
+import { APP_BRAND_SETTING_KEYS, DEFAULT_APP_LOGO_URL } from '@/lib/branding/constants';
 import { useAppSettings, useAppSettingsMutation } from '@/lib/query';
+import { useFileUpload } from '@/lib/hooks';
 import { getRequest } from '@/lib/apiClient';
+import { UploadKind } from '@/db/types';
 import type { AppSettingItem, SettingsUpdateInput } from '@/lib/api/client';
 
 const FormRichText = dynamic(
@@ -84,13 +89,89 @@ interface DoctorStatus {
 }
 
 const settingsFormSchema = z.object({
-  values: z.record(z.string(), z.string()),
+  settings: z.array(
+    z.object({
+      key: z.string(),
+      value: z.string(),
+    })
+  ),
 });
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
 
 function isMultilineKey(key: string): boolean {
   const normalized = key.toLowerCase();
   return MULTILINE_HINTS.some((hint) => normalized.includes(hint));
+}
+
+function normalizeSettingValue(setting: AppSettingItem): string {
+  if (setting.key === APP_BRAND_SETTING_KEYS.logoUrl) {
+    return setting.value?.trim() || DEFAULT_APP_LOGO_URL;
+  }
+  return setting.value;
+}
+
+interface AppLogoInputProps {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+}
+
+function AppLogoInput({ id, value, onChange, onBlur }: AppLogoInputProps) {
+  const t = useTranslations('admin.system.logoUpload');
+  const currentLogoUrl = value?.trim() || DEFAULT_APP_LOGO_URL;
+  const usingDefault = currentLogoUrl === DEFAULT_APP_LOGO_URL;
+  const { upload, isUploading, progress, error } = useFileUpload({
+    kind: UploadKind.ORGANIZATION_LOGO,
+    onSuccess: (result) => {
+      if (result.publicUrl) onChange(result.publicUrl);
+    },
+  });
+
+  const handleFiles = (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    void upload(file);
+  };
+
+  return (
+    <div className="space-y-3" onBlur={onBlur}>
+      <input id={id} type="hidden" value={currentLogoUrl} readOnly />
+      <div className="flex flex-col gap-3 rounded-lg border bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-16 shrink-0 items-center justify-center rounded-lg border bg-muted/30 p-2">
+            <BrandLogo
+              logoUrl={currentLogoUrl}
+              className="size-full"
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium">
+              {usingDefault ? t('defaultLogo') : t('customLogo')}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('previewDescription')}</p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isUploading || usingDefault}
+          onClick={() => onChange(DEFAULT_APP_LOGO_URL)}
+        >
+          {t('useDefault')}
+        </Button>
+      </div>
+      <FileDropzone
+        accept="image/*"
+        disabled={isUploading}
+        hint={isUploading ? t('uploading', { progress }) : t('hint')}
+        onFiles={handleFiles}
+        className="py-6"
+      />
+      {error && <p className="text-xs text-destructive">{error.message}</p>}
+    </div>
+  );
 }
 
 function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
@@ -117,12 +198,15 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
   };
 
   const defaultValues: SettingsFormValues = {
-    values: Object.fromEntries(settings.map((setting) => [setting.key, setting.value])),
+    settings: settings.map((setting) => ({
+      key: setting.key,
+      value: normalizeSettingValue(setting),
+    })),
   };
 
   const submit = async (values: SettingsFormValues) => {
     const payload: SettingsUpdateInput = {
-      settings: Object.entries(values.values).map(([key, value]) => ({ key, value })),
+      settings: values.settings.map(({ key, value }) => ({ key, value })),
     };
     await mutation.mutateAsync(payload);
   };
@@ -134,8 +218,8 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
       values={defaultValues as never}
       onSubmit={submit}
     >
-      {settings.map((setting) => {
-        const fieldName = `values.${setting.key}` as never;
+      {settings.map((setting, index) => {
+        const fieldName = `settings.${index}.value` as never;
         const label = labelFor(setting);
         const description = descriptionFor(setting);
 
@@ -160,6 +244,16 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
           >
             {(field) => {
               const value = (field.value as string | undefined) ?? '';
+              if (setting.key === APP_BRAND_SETTING_KEYS.logoUrl) {
+                return (
+                  <AppLogoInput
+                    id={field.name}
+                    value={value}
+                    onChange={(nextValue) => field.onChange(nextValue)}
+                    onBlur={field.onBlur}
+                  />
+                );
+              }
               if (isMultilineKey(setting.key) && !setting.isSecret) {
                 return (
                   <Textarea
@@ -269,7 +363,7 @@ function DoctorPanel({ doctor }: { doctor: DoctorStatus | undefined }) {
                 >
                   <span className="text-sm font-medium">{key}</span>
                   <span className="ml-4 max-w-64 truncate text-sm text-muted-foreground">
-                    {value ?? '—'}
+                    {value ?? '-'}
                   </span>
                 </div>
               ))}
@@ -283,7 +377,6 @@ function DoctorPanel({ doctor }: { doctor: DoctorStatus | undefined }) {
 
 export default function SystemPage() {
   const t = useTranslations('admin.system');
-  const tCommon = useTranslations('common');
   const { data: settings, isLoading: loadingSettings } = useAppSettings();
   const {
     data: health,
@@ -305,7 +398,7 @@ export default function SystemPage() {
       actions={
         <Button variant="outline" onClick={() => refetchHealth()}>
           <RefreshCwIcon />
-          {tCommon('next')}
+          {t('refreshButton')}
         </Button>
       }
     >

@@ -42,7 +42,7 @@ export function DataGridPagination<TData>({
           size="sm"
           disabled={!table.getCanPreviousPage()}
           onClick={() => table.previousPage()}
-          aria-label="Previous page"
+          aria-label={t('previousPage')}
         >
           <ChevronLeftIcon />
         </Button>
@@ -55,7 +55,7 @@ export function DataGridPagination<TData>({
           size="sm"
           disabled={!table.getCanNextPage()}
           onClick={() => table.nextPage()}
-          aria-label="Next page"
+          aria-label={t('nextPage')}
         >
           <ChevronRightIcon />
         </Button>

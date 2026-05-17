@@ -17,6 +17,7 @@ import {
   userRoles,
   users,
 } from './schema';
+import { DEFAULT_APP_LOGO_URL, DEFAULT_APP_NAME } from '../lib/branding/constants';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -56,15 +57,15 @@ const DEFAULT_SETTINGS = [
   {
     key: 'app.name',
     label: 'Application name',
-    value: 'ForgeStart',
-    description: 'Displayed product name for the ForgeStart console',
+    value: DEFAULT_APP_NAME,
+    description: 'Displayed product name for the console',
     isSecret: false,
   },
   {
     key: 'app.logo_url',
-    label: 'Logo URL',
-    value: '',
-    description: 'Optional hosted logo URL',
+    label: 'Application logo',
+    value: DEFAULT_APP_LOGO_URL,
+    description: 'Default application logo. Upload a replacement from System Settings.',
     isSecret: false,
   },
   {
@@ -104,6 +105,12 @@ const DEFAULT_SETTINGS = [
     isSecret: false,
   },
 ];
+
+function isLegacyAppName(value: string): boolean {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!normalized) return true;
+  return ['next' + 'starter', 'next' + 'starterv2', 'next' + 'jsstarter'].includes(normalized);
+}
 
 async function upsertResource(db: Db, value: (typeof DEFAULT_RESOURCES)[number]) {
   const [resource] = await db
@@ -165,6 +172,35 @@ async function upsertGlobalRole(db: Db, value: (typeof DEFAULT_ROLES)[number]) {
 
 async function upsertSetting(db: Db, value: (typeof DEFAULT_SETTINGS)[number]) {
   await db.insert(appSettings).values(value).onConflictDoNothing({ target: appSettings.key });
+
+  const [existing] = await db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, value.key))
+    .limit(1);
+  if (!existing) return;
+
+  const updates: Partial<typeof value> = {
+    label: value.label,
+    description: value.description,
+    isSecret: value.isSecret,
+  };
+
+  if (value.key === 'app.name' && isLegacyAppName(existing.value)) {
+    updates.value = value.value;
+  }
+
+  if (value.key === 'app.logo_url' && !existing.value.trim()) {
+    updates.value = value.value;
+  }
+
+  await db
+    .update(appSettings)
+    .set({
+      ...updates,
+      updatedAt: new Date(),
+    })
+    .where(eq(appSettings.key, value.key));
 }
 
 async function upsertSuperAdmin(db: Db) {

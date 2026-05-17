@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 import { AlertTriangleIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -26,11 +27,13 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Delete',
+  confirmLabel,
   loading,
   onConfirm,
   onOpenChange,
 }: ConfirmDialogProps) {
+  const tCommon = useTranslations('common');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -43,10 +46,10 @@ export function ConfirmDialog({
         </DialogHeader>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {tCommon('cancel')}
           </Button>
           <Button type="button" variant="destructive" disabled={loading} onClick={onConfirm}>
-            {loading ? 'Working...' : confirmLabel}
+            {loading ? tCommon('working') : (confirmLabel ?? tCommon('delete'))}
           </Button>
         </DialogFooter>
       </DialogContent>

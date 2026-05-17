@@ -6,6 +6,7 @@ import Navbar from '@/core/layout/components/Navbar';
 import Sidebar from '@/core/layout/components/Sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VerifyEmailBanner } from '@/components/auth/verify-banner';
+import { useAppBranding } from '@/lib/branding/use-app-branding';
 import { cn } from '@/lib/utils';
 
 function ProtectedSkeleton() {
@@ -31,6 +32,7 @@ function ProtectedSkeleton() {
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
+  const { branding } = useAppBranding({ enabled: status === 'authenticated' });
   const [collapsed, setCollapsed] = useState(false);
 
   if (status === 'loading' || !session) {
@@ -39,14 +41,14 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,var(--accent),transparent_28rem),var(--background)]">
-      <Sidebar collapsed={collapsed} />
+      <Sidebar collapsed={collapsed} branding={branding} />
       <div
         className={cn(
           'min-h-screen transition-[padding] duration-200',
           collapsed ? 'lg:pl-20' : 'lg:pl-72'
         )}
       >
-        <Navbar collapsed={collapsed} setCollapsed={setCollapsed} />
+        <Navbar collapsed={collapsed} setCollapsed={setCollapsed} branding={branding} />
         <main className="px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-7xl flex-col gap-6">
             <VerifyEmailBanner />
