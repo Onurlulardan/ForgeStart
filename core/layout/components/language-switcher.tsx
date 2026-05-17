@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { LanguagesIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { usePathname, useRouter } from '@/i18n/navigation';
 import { routing, type AppLocale } from '@/i18n/routing';
 
 const labels: Record<AppLocale, string> = {
@@ -20,17 +20,23 @@ const labels: Record<AppLocale, string> = {
   en: 'English',
 };
 
+const COOKIE_NAME =
+  typeof routing.localeCookie === 'object' && routing.localeCookie && 'name' in routing.localeCookie
+    ? ((routing.localeCookie as { name?: string }).name ?? 'NEXT_LOCALE')
+    : 'NEXT_LOCALE';
+
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
 export function LanguageSwitcher() {
   const t = useTranslations('userMenu');
   const locale = useLocale() as AppLocale;
   const router = useRouter();
-  const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
   const switchTo = (next: AppLocale) => {
     if (next === locale) return;
+    document.cookie = `${COOKIE_NAME}=${next}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
     startTransition(() => {
-      router.replace(pathname, { locale: next });
       router.refresh();
     });
   };

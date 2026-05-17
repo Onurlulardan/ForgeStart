@@ -8,7 +8,6 @@ import {
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { FormField } from './form-field';
 
@@ -53,26 +52,34 @@ export function FormSelect<
       description={description}
       className={containerClassName}
     >
-      {(field) => (
-        <Select
-          value={(field.value as string | null | undefined) ?? emptyValue ?? ''}
-          onValueChange={(value) => field.onChange(value === emptyValue ? null : value)}
-          disabled={disabled}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {options.map((option) => (
-                <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      )}
+      {(field) => {
+        const value = (field.value as string | null | undefined) ?? emptyValue ?? '';
+        const selected = options.find((option) => option.value === value);
+        return (
+          <Select
+            value={value}
+            onValueChange={(next) => field.onChange(next === emptyValue ? null : next)}
+            disabled={disabled}
+          >
+            <SelectTrigger className="w-full">
+              {selected ? (
+                selected.label
+              ) : (
+                <span className="text-muted-foreground">{placeholder}</span>
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {options.map((option) => (
+                  <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        );
+      }}
     </FormField>
   );
 }

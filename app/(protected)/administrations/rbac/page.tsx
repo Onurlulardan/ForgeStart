@@ -19,7 +19,6 @@ import {
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import {
   Table,
@@ -104,7 +103,11 @@ export default function RbacMatrixPage() {
                 onValueChange={(value) => setSelectedRoleId(value ?? '')}
               >
                 <SelectTrigger className="w-64">
-                  <SelectValue placeholder={t('selectRole')} />
+                  {selectedRole ? (
+                    selectedRole.name
+                  ) : (
+                    <span className="text-muted-foreground">{t('selectRole')}</span>
+                  )}
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
