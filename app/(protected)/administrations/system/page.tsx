@@ -50,6 +50,7 @@ const RICH_TEXT_KEYS = new Set([
   'system.legal.privacy',
   'system.legal.terms',
 ]);
+const HIDDEN_SETTINGS_KEYS = new Set(['theme.tokens']);
 const MULTILINE_HINTS = ['description', 'message', 'body', 'content'];
 
 interface HealthStatus {
@@ -178,27 +179,20 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
   const t = useTranslations('admin.system');
   const tLabels = useTranslations('admin.system.settingsLabels');
   const mutation = useAppSettingsMutation();
+  const visibleSettings = settings.filter((setting) => !HIDDEN_SETTINGS_KEYS.has(setting.key));
 
   const labelFor = (setting: AppSettingItem): string => {
-    const key = `${setting.key}.label` as never;
-    try {
-      return tLabels(key);
-    } catch {
-      return setting.label;
-    }
+    const key = `${setting.key}.label`;
+    return tLabels.has(key) ? tLabels(key as never) : setting.label;
   };
 
   const descriptionFor = (setting: AppSettingItem): string | undefined => {
-    const key = `${setting.key}.description` as never;
-    try {
-      return tLabels(key);
-    } catch {
-      return setting.description ?? undefined;
-    }
+    const key = `${setting.key}.description`;
+    return tLabels.has(key) ? tLabels(key as never) : (setting.description ?? undefined);
   };
 
   const defaultValues: SettingsFormValues = {
-    settings: settings.map((setting) => ({
+    settings: visibleSettings.map((setting) => ({
       key: setting.key,
       value: normalizeSettingValue(setting),
     })),
@@ -218,7 +212,7 @@ function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
       values={defaultValues as never}
       onSubmit={submit}
     >
-      {settings.map((setting, index) => {
+      {visibleSettings.map((setting, index) => {
         const fieldName = `settings.${index}.value` as never;
         const label = labelFor(setting);
         const description = descriptionFor(setting);

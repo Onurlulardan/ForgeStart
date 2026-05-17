@@ -391,6 +391,12 @@
             "description": "Yüklenen varlıklar için depolama stratejisi"
           }
         },
+        "theme": {
+          "tokens": {
+            "label": "Tema token'ları",
+            "description": "Tema özelleştirici ekranından yönetilen sistem geneli tasarım token'ları."
+          }
+        },
         "system": {
           "welcomeMessage": {
             "label": "Karşılama mesajı",

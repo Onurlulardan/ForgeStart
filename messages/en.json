@@ -391,6 +391,12 @@
             "description": "Storage strategy for uploaded assets"
           }
         },
+        "theme": {
+          "tokens": {
+            "label": "Theme tokens",
+            "description": "System-wide design tokens managed from Theme customizer."
+          }
+        },
         "system": {
           "welcomeMessage": {
             "label": "Welcome message",
