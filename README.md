@@ -9,7 +9,7 @@ ForgeStart is a production-ready Next.js starter for admin-heavy SaaS products. 
 ## Quick Start
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Onurlulardan/ForgeStart.git
 cd ForgeStart
 corepack enable
 yarn install
