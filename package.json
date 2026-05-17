@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "packageManager": "yarn@4.14.1",
   "scripts": {
     "dev": "node scripts/next-port.mjs dev",
