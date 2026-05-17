@@ -1,84 +1,43 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { Action } from '@/db/types';
-import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
+import { Form, FormInput, FormTextarea, SubmitButton } from '@/components/forms';
+import { actionSchema } from '@/lib/validation/admin';
+import type { Action, ActionInput } from '@/lib/api/client';
 
-export interface ActionFormData {
-  name: string;
-  slug: string;
-  description: string | null;
-}
-
-interface ActionFormProps {
+export interface ActionFormProps {
   initialValues?: Action | null;
-  onSubmit: (values: ActionFormData) => Promise<void>;
-  loading?: boolean;
+  onSubmit: (values: ActionInput) => Promise<void>;
 }
 
-const emptyForm: ActionFormData = {
-  name: '',
-  slug: '',
-  description: null,
-};
+export function ActionForm({ initialValues, onSubmit }: ActionFormProps) {
+  const tCommon = useTranslations('common');
+  const schema = actionSchema as unknown as z.ZodType<ActionInput>;
 
-export function ActionForm({ initialValues, onSubmit, loading }: ActionFormProps) {
-  const [values, setValues] = useState<ActionFormData>(emptyForm);
-
-  useEffect(() => {
-    setValues({
+  const defaultValues = useMemo<ActionInput>(
+    () => ({
       name: initialValues?.name ?? '',
       slug: initialValues?.slug ?? '',
       description: initialValues?.description ?? null,
-    });
-  }, [initialValues]);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await onSubmit(values);
-  };
+    }),
+    [initialValues]
+  );
 
   return (
-    <form onSubmit={handleSubmit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="actionName">Action name</FieldLabel>
-          <Input
-            id="actionName"
-            value={values.name}
-            minLength={3}
-            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
-            required
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="actionSlug">Slug</FieldLabel>
-          <Input
-            id="actionSlug"
-            pattern="^[a-z0-9-_]+$"
-            value={values.slug}
-            onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))}
-            required
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="actionDescription">Description</FieldLabel>
-          <Textarea
-            id="actionDescription"
-            rows={4}
-            value={values.description ?? ''}
-            onChange={(event) =>
-              setValues((current) => ({ ...current, description: event.target.value || null }))
-            }
-          />
-        </Field>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Saving...' : initialValues ? 'Update action' : 'Create action'}
-        </Button>
-      </FieldGroup>
-    </form>
+    <Form<ActionInput>
+      schema={schema}
+      defaultValues={defaultValues as never}
+      values={defaultValues as never}
+      onSubmit={onSubmit}
+    >
+      <FormInput name="name" label={tCommon('name')} minLength={3} />
+      <FormInput name="slug" label={tCommon('slug')} pattern="^[a-z0-9-_]+$" />
+      <FormTextarea name="description" label={tCommon('description')} rows={4} />
+      <SubmitButton className="w-full">
+        {initialValues ? tCommon('update') : tCommon('create')}
+      </SubmitButton>
+    </Form>
   );
 }

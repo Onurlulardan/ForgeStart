@@ -1,73 +1,77 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { LockIcon } from 'lucide-react';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { postRequest } from '@/lib/apiClient';
+import { Form, FormField, SubmitButton } from '@/components/forms';
+import { Link } from '@/i18n/navigation';
+import { passwordResetConfirmSchema } from '@/lib/validation/admin';
+import { authApi, type PasswordResetConfirmInput } from '@/lib/api/client';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function ResetPasswordForm() {
+  const t = useTranslations('auth');
   const searchParams = useSearchParams();
-  const [token, setToken] = useState(searchParams.get('token') ?? '');
-  const [password, setPassword] = useState('');
   const [done, setDone] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { showNotification } = useNotification();
+  const schema = passwordResetConfirmSchema as unknown as z.ZodType<PasswordResetConfirmInput>;
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    try {
-      await postRequest('/auth/password-reset/confirm', { token, password });
-      setDone(true);
-    } finally {
-      setLoading(false);
-    }
+  const submit = async (values: PasswordResetConfirmInput) => {
+    await authApi.passwordResetConfirm(values);
+    showNotification('success', t('resetSuccess'));
+    setDone(true);
   };
 
   return (
-    <form onSubmit={submit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="token">Token</FieldLabel>
+    <Form<PasswordResetConfirmInput>
+      schema={schema}
+      defaultValues={{
+        token: searchParams.get('token') ?? '',
+        password: '',
+      }}
+      onSubmit={submit}
+    >
+      <FormField<PasswordResetConfirmInput> name="token" label="Token">
+        {(field) => (
           <InputGroup>
             <InputGroupAddon>
               <LockIcon />
             </InputGroupAddon>
             <InputGroupInput
-              id="token"
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-              required
+              id={field.name}
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
             />
           </InputGroup>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="password">New password</FieldLabel>
+        )}
+      </FormField>
+      <FormField<PasswordResetConfirmInput> name="password" label={t('newPasswordLabel')}>
+        {(field) => (
           <InputGroup>
             <InputGroupAddon>
               <LockIcon />
             </InputGroupAddon>
             <InputGroupInput
-              id="password"
+              id={field.name}
               type="password"
               minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
             />
           </InputGroup>
-        </Field>
-        {done ? (
-          <Button render={<Link href="/auth/login" />}>Sign in</Button>
-        ) : (
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : 'Set new password'}
-          </Button>
         )}
-      </FieldGroup>
-    </form>
+      </FormField>
+      {done ? (
+        <Button render={<Link href="/auth/login" />}>{t('loginLink')}</Button>
+      ) : (
+        <SubmitButton>{t('submitReset')}</SubmitButton>
+      )}
+    </Form>
   );
 }

@@ -1,232 +1,228 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { KeyRoundIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { CopyIcon, KeyRoundIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { ColumnDef } from '@tanstack/react-table';
+import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { DataGrid } from '@/components/data-grid';
+import { PageShell, CrudSheet } from '@/components/layout';
+import { PermissionButton } from '@/components/permission';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { ConfirmDialog } from '@/components/app/confirm-dialog';
-import { PageHeader } from '@/components/app/page-header';
-import { deleteRequest, getRequest, postRequest } from '@/lib/apiClient';
+  Form,
+  FormInput,
+  SubmitButton,
+} from '@/components/forms';
+import { useClipboard, useCrudResource } from '@/lib/hooks';
+import { useApiKeys, useApiKeyMutations } from '@/lib/query';
+import { formatRelative } from '@/lib/formatters';
+import type { ApiKeyCreateInput, ApiKeyListItem } from '@/lib/api/client';
 
-type ApiKeyRow = {
-  id: string;
+type FormValues = {
   name: string;
-  keyPrefix: string;
-  scopes: string[];
-  lastUsedAt: string | null;
-  expiresAt: string | null;
-  revokedAt: string | null;
-  createdAt: string;
-  createdBy: {
-    email: string | null;
-    firstName: string | null;
-    lastName: string | null;
-  } | null;
+  scopesText: string;
+  expiresAt: string;
 };
 
+const formSchema = z.object({
+  name: z.string().trim().min(3),
+  scopesText: z.string(),
+  expiresAt: z.string(),
+}) as unknown as z.ZodType<FormValues>;
+
 export default function ApiKeysPage() {
-  const [apiKeys, setApiKeys] = useState<ApiKeyRow[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const t = useTranslations('admin.apiKeys');
+  const tCommon = useTranslations('common');
+  const { data: apiKeys = [], isLoading } = useApiKeys();
+  const mutations = useApiKeyMutations();
+  const { copy, copied } = useClipboard();
+
   const [createdKey, setCreatedKey] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [scopes, setScopes] = useState('user:read,organization:read');
-  const [expiresAt, setExpiresAt] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [revokeId, setRevokeId] = useState<string | null>(null);
+  const crud = useCrudResource<ApiKeyListItem>({
+    resource: 'api-key',
+    onDelete: async (apiKey) => {
+      await mutations.revoke.mutateAsync(apiKey.id);
+    },
+    deleteConfirm: {
+      title: t('revokeTitle'),
+      description: t('revokeDescription'),
+    },
+  });
 
-  const loadApiKeys = async () => {
-    setApiKeys(await getRequest<ApiKeyRow[]>('/administrations/api-keys'));
+  const submit = async (values: FormValues) => {
+    const payload: ApiKeyCreateInput = {
+      name: values.name,
+      scopes: values.scopesText
+        .split(',')
+        .map((scope) => scope.trim())
+        .filter(Boolean),
+      expiresAt: values.expiresAt ? new Date(values.expiresAt).toISOString() : undefined,
+    };
+    // bypass strict typing; values from form differ slightly from API schema
+    const response = await mutations.create.mutateAsync(payload as never);
+    setCreatedKey(response.key);
   };
 
-  useEffect(() => {
-    loadApiKeys().catch(console.error);
-  }, []);
+  const columns = useMemo<ColumnDef<ApiKeyListItem>[]>(
+    () => [
+      {
+        id: 'name',
+        header: t('columns.name'),
+        accessorKey: 'name',
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        id: 'prefix',
+        header: t('columns.prefix'),
+        accessorKey: 'keyPrefix',
+      },
+      {
+        id: 'scopes',
+        header: t('columns.scopes'),
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.scopes?.map((scope) => (
+              <Badge key={scope} variant="outline" className="rounded-md">
+                {scope}
+              </Badge>
+            ))}
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        header: t('columns.lastUsed'),
+        cell: ({ row }) => (
+          <Badge variant={row.original.revokedAt ? 'destructive' : 'secondary'}>
+            {row.original.revokedAt ? 'Revoked' : 'Active'}
+          </Badge>
+        ),
+      },
+      {
+        id: 'lastUsedAt',
+        header: t('columns.lastUsed'),
+        cell: ({ row }) =>
+          row.original.lastUsedAt ? formatRelative(row.original.lastUsedAt) : '—',
+      },
+    ],
+    [t]
+  );
 
-  const createApiKey = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSaving(true);
-    try {
-      const response = await postRequest<ApiKeyRow & { key: string }>('/administrations/api-keys', {
-        name,
-        scopes: scopes
-          .split(',')
-          .map((scope) => scope.trim())
-          .filter(Boolean),
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
-      });
-      setCreatedKey(response.key);
-      setName('');
-      setScopes('user:read,organization:read');
-      setExpiresAt('');
-      await loadApiKeys();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const revokeApiKey = async () => {
-    if (!revokeId) return;
-    await deleteRequest(`/administrations/api-keys/${revokeId}`);
-    setRevokeId(null);
-    await loadApiKeys();
+  const defaultValues: FormValues = {
+    name: '',
+    scopesText: 'user:read,organization:read',
+    expiresAt: '',
   };
 
   return (
-    <>
-      <PageHeader
-        title="API keys"
-        description="Create scoped service credentials for integrations and automation."
-        actions={
-          <Button onClick={() => setDialogOpen(true)}>
-            <PlusIcon data-icon="inline-start" />
-            New key
-          </Button>
-        }
-      />
-
+    <PageShell
+      title={t('title')}
+      description={t('description')}
+      actions={
+        <PermissionButton
+          resource="api-key"
+          action="create"
+          onClick={() => {
+            setCreatedKey(null);
+            crud.openCreate();
+          }}
+        >
+          <PlusIcon />
+          {t('createButton')}
+        </PermissionButton>
+      }
+    >
       <Card className="rounded-lg">
-        <CardHeader>
-          <CardTitle>Service credentials</CardTitle>
-          <CardDescription>
-            Keys are hashed at rest and the secret is shown only once.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Prefix</TableHead>
-                  <TableHead>Scopes</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last used</TableHead>
-                  <TableHead className="w-16" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {apiKeys.map((apiKey) => (
-                  <TableRow key={apiKey.id}>
-                    <TableCell className="font-medium">{apiKey.name}</TableCell>
-                    <TableCell>{apiKey.keyPrefix}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {apiKey.scopes.map((scope) => (
-                          <Badge key={scope} variant="outline">
-                            {scope}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={apiKey.revokedAt ? 'destructive' : 'secondary'}>
-                        {apiKey.revokedAt ? 'Revoked' : 'Active'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleString() : 'Never'}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={Boolean(apiKey.revokedAt)}
-                        onClick={() => setRevokeId(apiKey.id)}
-                        aria-label={`Revoke ${apiKey.name}`}
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="p-4">
+          <DataGrid<ApiKeyListItem>
+            data={apiKeys}
+            columns={columns}
+            loading={isLoading}
+            columnVisibilityStorageKey="admin-api-keys"
+            exportFileName="api-keys"
+            toolbar={{ search: true, columnVisibility: true, exportable: true }}
+            rowActions={(record) => [
+              {
+                label: t('revoke'),
+                icon: <Trash2Icon />,
+                destructive: true,
+                disabled: () => Boolean(record.revokedAt) || !crud.permissions.canDelete,
+                onSelect: (item) => {
+                  void crud.confirmDelete(item);
+                },
+              },
+            ]}
+          />
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create API key</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={createApiKey}>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="apiKeyName">Name</FieldLabel>
-                <Input
-                  id="apiKeyName"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  required
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="apiKeyScopes">Scopes</FieldLabel>
-                <Input
-                  id="apiKeyScopes"
-                  value={scopes}
-                  onChange={(event) => setScopes(event.target.value)}
-                />
-                <FieldDescription>Comma-separated scope names.</FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="apiKeyExpiry">Expires at</FieldLabel>
-                <Input
-                  id="apiKeyExpiry"
-                  type="datetime-local"
-                  value={expiresAt}
-                  onChange={(event) => setExpiresAt(event.target.value)}
-                />
-              </Field>
-              {createdKey && (
-                <Card className="rounded-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <KeyRoundIcon />
-                      Secret key
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <code className="block break-all rounded-lg bg-muted p-3 text-sm">
+      <CrudSheet
+        open={crud.isFormOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            crud.closeForm();
+            setCreatedKey(null);
+          }
+        }}
+        title={t('createTitle')}
+        description={t('createDescription')}
+      >
+        <Form<FormValues>
+          schema={formSchema}
+          defaultValues={defaultValues as never}
+          onSubmit={submit}
+        >
+          <FormInput name="name" label={tCommon('name')} />
+          <FormInput
+            name="scopesText"
+            label={t('scopesLabel')}
+            description={t('scopesLabel')}
+          />
+          <FormInput
+            name="expiresAt"
+            type="datetime-local"
+            label={t('expiresAtLabel')}
+          />
+          {createdKey && (
+            <Card className="rounded-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <KeyRoundIcon />
+                  {t('createTitle')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Field>
+                  <FieldLabel>{tCommon('copy')}</FieldLabel>
+                  <div className="flex gap-2">
+                    <code className="block flex-1 break-all rounded-lg bg-muted p-3 text-sm">
                       {createdKey}
                     </code>
-                  </CardContent>
-                </Card>
-              )}
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Close
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving ? 'Creating...' : 'Create key'}
-                </Button>
-              </div>
-            </FieldGroup>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={Boolean(revokeId)}
-        title="Revoke API key"
-        description="This service credential will stop working immediately."
-        confirmLabel="Revoke"
-        onConfirm={revokeApiKey}
-        onOpenChange={(open) => !open && setRevokeId(null)}
-      />
-    </>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copy(createdKey)}
+                      aria-label={tCommon('copy')}
+                    >
+                      <CopyIcon />
+                    </Button>
+                  </div>
+                  <FieldDescription>{t('secretShown')}</FieldDescription>
+                  {copied && (
+                    <p className="text-xs text-muted-foreground">{tCommon('copied')}</p>
+                  )}
+                </Field>
+              </CardContent>
+            </Card>
+          )}
+          <SubmitButton className="w-full">{t('createButton')}</SubmitButton>
+        </Form>
+      </CrudSheet>
+    </PageShell>
   );
 }

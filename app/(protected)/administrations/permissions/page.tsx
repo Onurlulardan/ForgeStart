@@ -1,470 +1,366 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { EditIcon, KeyRoundIcon, LayersIcon, PlusIcon, Trash2Icon, ZapIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTranslations } from 'next-intl';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
-import { ConfirmDialog } from '@/components/app/confirm-dialog';
-import { EntityActions } from '@/components/app/entity-actions';
-import { PageHeader } from '@/components/app/page-header';
-import { usePermission } from '@/lib/auth/client-permissions';
-import { DataGrid } from '@/core/components/datagrid';
-import { Permission, Resource, Action } from '@/db/types';
-import { getRequest, postRequest, putRequest, deleteRequest } from '@/lib/apiClient';
-import { PermissionForm, PermissionFormData } from './components/permission-form';
-import { ResourceForm, ResourceFormData } from './components/resource-form';
-import { ActionForm, ActionFormData } from './components/action-form';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DataGrid } from '@/components/data-grid';
+import { PageShell, CrudSheet } from '@/components/layout';
+import { PermissionButton } from '@/components/permission';
+import { useCrudResource } from '@/lib/hooks';
+import {
+  useActions,
+  useActionMutations,
+  usePermissions,
+  usePermissionMutations,
+  useResources,
+  useResourceMutations,
+} from '@/lib/query';
+import type {
+  Action,
+  ActionInput,
+  PermissionInput,
+  PermissionWithRelations,
+  Resource,
+  ResourceInput,
+} from '@/lib/api/client';
+import { ActionForm } from './components/action-form';
+import { PermissionForm } from './components/permission-form';
+import { ResourceForm } from './components/resource-form';
 
-interface PermissionWithRelations extends Permission {
-  resource: Resource;
-  actions: {
-    action: Action;
-  }[];
-  user?: {
-    id: string;
-    email: string;
-    firstName: string | null;
-    lastName: string | null;
-  } | null;
-  role?: {
-    id: string;
-    name: string;
-    organizationId: string | null;
-  } | null;
-  organization?: {
-    id: string;
-    name: string;
-  } | null;
-}
+function PermissionsTab() {
+  const t = useTranslations('admin.permissions');
+  const tFields = useTranslations('admin.permissions.fields');
+  const tCommon = useTranslations('common');
+  const { data: permissions = [], isLoading } = usePermissions();
+  const mutations = usePermissionMutations();
 
-type ActiveTab = 'permissions' | 'resources' | 'actions';
-
-export default function PermissionsPage() {
-  const [permissions, setPermissions] = useState<PermissionWithRelations[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [actions, setActions] = useState<Action[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('permissions');
-  const [permissionDrawerVisible, setPermissionDrawerVisible] = useState(false);
-  const [resourceDrawerVisible, setResourceDrawerVisible] = useState(false);
-  const [actionDrawerVisible, setActionDrawerVisible] = useState(false);
-  const [selectedPermission, setSelectedPermission] = useState<PermissionWithRelations | null>(
-    null
-  );
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
-  const [selectedAction, setSelectedAction] = useState<Action | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{
-    type: 'permission' | 'resource' | 'action';
-    id: string;
-  } | null>(null);
-
-  const canCreatePermission = usePermission('permission', 'create');
-  const canEditPermission = usePermission('permission', 'edit');
-  const canDeletePermission = usePermission('permission', 'delete');
-  const canCreateResource = usePermission('resource', 'create');
-  const canEditResource = usePermission('resource', 'edit');
-  const canDeleteResource = usePermission('resource', 'delete');
-  const canCreateAction = usePermission('action', 'create');
-  const canEditAction = usePermission('action', 'edit');
-  const canDeleteAction = usePermission('action', 'delete');
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      if (activeTab === 'permissions') {
-        setPermissions(await getRequest<PermissionWithRelations[]>('/administrations/permissions'));
-      } else if (activeTab === 'resources') {
-        setResources(await getRequest<Resource[]>('/administrations/resources'));
-      } else {
-        setActions(await getRequest<Action[]>('/administrations/actions'));
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
-
-  const closeDrawers = () => {
-    setPermissionDrawerVisible(false);
-    setResourceDrawerVisible(false);
-    setActionDrawerVisible(false);
-    setSelectedPermission(null);
-    setSelectedResource(null);
-    setSelectedAction(null);
-  };
-
-  const handleSubmit = async (values: PermissionFormData | ResourceFormData | ActionFormData) => {
-    setFormLoading(true);
-    try {
-      const endpoint =
-        activeTab === 'permissions'
-          ? selectedPermission
-            ? `/administrations/permissions/${selectedPermission.id}`
-            : '/administrations/permissions'
-          : activeTab === 'resources'
-            ? selectedResource
-              ? `/administrations/resources/${selectedResource.id}`
-              : '/administrations/resources'
-            : selectedAction
-              ? `/administrations/actions/${selectedAction.id}`
-              : '/administrations/actions';
-
-      if (selectedPermission || selectedResource || selectedAction) {
-        await putRequest(endpoint, values);
-      } else {
-        await postRequest(endpoint, values);
-      }
-
-      closeDrawers();
-      fetchData();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!itemToDelete) return;
-
-    try {
-      await deleteRequest(`/administrations/${itemToDelete.type}s/${itemToDelete.id}`);
-      setDeleteModalVisible(false);
-      setItemToDelete(null);
-      fetchData();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const permissionColumns = [
-    {
-      title: '',
-      key: 'actions',
-      width: 72,
-      render: (record: PermissionWithRelations) => (
-        <EntityActions
-          actions={[
-            {
-              label: 'Edit',
-              icon: <EditIcon />,
-              disabled: !canEditPermission,
-              onSelect: () => {
-                setSelectedPermission(record);
-                setPermissionDrawerVisible(true);
-              },
-            },
-            {
-              label: 'Delete',
-              icon: <Trash2Icon />,
-              destructive: true,
-              disabled: !canDeletePermission,
-              onSelect: () => {
-                setItemToDelete({ type: 'permission', id: record.id });
-                setDeleteModalVisible(true);
-              },
-            },
-          ]}
-        />
-      ),
+  const crud = useCrudResource<PermissionWithRelations>({
+    resource: 'permission',
+    onDelete: async (item) => {
+      await mutations.remove.mutateAsync(item.id);
     },
-    {
-      title: 'Resource',
-      key: 'resource',
-      render: (record: PermissionWithRelations) => record.resource.name,
+    deleteConfirm: {
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
     },
-    {
-      title: 'Target',
-      key: 'targetName',
-      render: (record: PermissionWithRelations) => {
-        if (record.user)
-          return (
-            `${record.user.firstName ?? ''} ${record.user.lastName ?? ''}`.trim() ||
-            record.user.email
-          );
-        if (record.role)
-          return `${record.role.name}${record.role.organizationId ? ' (Organization)' : ' (Global)'}`;
-        if (record.organization) return record.organization.name;
-        return '-';
+  });
+
+  const submit = async (values: PermissionInput) => {
+    if (crud.selected) {
+      await mutations.update.mutateAsync({ id: crud.selected.id, data: values });
+    } else {
+      await mutations.create.mutateAsync(values);
+    }
+    crud.closeForm();
+  };
+
+  const columns = useMemo<ColumnDef<PermissionWithRelations>[]>(
+    () => [
+      {
+        id: 'resource',
+        header: tFields('resource'),
+        cell: ({ row }) => row.original.resource?.name ?? '—',
       },
-    },
-    {
-      title: 'Type',
-      dataIndex: 'target',
-      key: 'target',
-      render: (target: string) => (
-        <Badge variant="secondary" className="rounded-md">
-          {target}
-        </Badge>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'permissionActions',
-      render: (record: PermissionWithRelations) => (
-        <div className="flex flex-wrap gap-1">
-          {record.actions.map((permissionAction) => (
-            <Badge key={permissionAction.action.id} variant="outline" className="rounded-md">
-              {permissionAction.action.name}
-            </Badge>
-          ))}
-        </div>
-      ),
-    },
-  ];
-
-  const resourceColumns = [
-    {
-      title: '',
-      key: 'actions',
-      width: 72,
-      render: (record: Resource) => (
-        <EntityActions
-          actions={[
-            {
-              label: 'Edit',
-              icon: <EditIcon />,
-              disabled: !canEditResource,
-              onSelect: () => {
-                setSelectedResource(record);
-                setResourceDrawerVisible(true);
-              },
-            },
-            {
-              label: 'Delete',
-              icon: <Trash2Icon />,
-              destructive: true,
-              disabled: !canDeleteResource,
-              onSelect: () => {
-                setItemToDelete({ type: 'resource', id: record.id });
-                setDeleteModalVisible(true);
-              },
-            },
-          ]}
-        />
-      ),
-    },
-    { title: 'Name', dataIndex: 'name', key: 'name' },
-    { title: 'Slug', dataIndex: 'slug', key: 'slug' },
-    { title: 'Description', dataIndex: 'description', key: 'description' },
-  ];
-
-  const actionColumns = [
-    {
-      title: '',
-      key: 'actions',
-      width: 72,
-      render: (record: Action) => (
-        <EntityActions
-          actions={[
-            {
-              label: 'Edit',
-              icon: <EditIcon />,
-              disabled: !canEditAction,
-              onSelect: () => {
-                setSelectedAction(record);
-                setActionDrawerVisible(true);
-              },
-            },
-            {
-              label: 'Delete',
-              icon: <Trash2Icon />,
-              destructive: true,
-              disabled: !canDeleteAction,
-              onSelect: () => {
-                setItemToDelete({ type: 'action', id: record.id });
-                setDeleteModalVisible(true);
-              },
-            },
-          ]}
-        />
-      ),
-    },
-    { title: 'Name', dataIndex: 'name', key: 'name' },
-    { title: 'Slug', dataIndex: 'slug', key: 'slug' },
-    { title: 'Description', dataIndex: 'description', key: 'description' },
-  ];
+      {
+        id: 'target',
+        header: tFields('target'),
+        accessorKey: 'target',
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="rounded-md">
+            {row.original.target}
+          </Badge>
+        ),
+      },
+      {
+        id: 'targetName',
+        header: tFields('user'),
+        cell: ({ row }) => {
+          const record = row.original;
+          if (record.user) {
+            return (
+              `${record.user.email}` || record.user.id
+            );
+          }
+          if (record.role) return record.role.name;
+          if (record.organization) return record.organization.name;
+          return '—';
+        },
+      },
+      {
+        id: 'actions',
+        header: tFields('actions'),
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.actions?.map((item) => (
+              <Badge key={item.action.id} variant="outline" className="rounded-md">
+                {item.action.name}
+              </Badge>
+            ))}
+          </div>
+        ),
+      },
+    ],
+    [tFields]
+  );
 
   return (
     <>
-      <PageHeader
-        title="Permissions"
-        description="Manage resource access through permissions, resources and reusable actions."
+      <div className="flex justify-end pb-3">
+        <PermissionButton resource="permission" action="create" onClick={crud.openCreate}>
+          <PlusIcon />
+          {t('createPermission')}
+        </PermissionButton>
+      </div>
+      <DataGrid<PermissionWithRelations>
+        data={permissions}
+        columns={columns}
+        loading={isLoading}
+        columnVisibilityStorageKey="admin-permissions"
+        exportFileName="permissions"
+        toolbar={{ search: true, columnVisibility: true, exportable: true }}
+        rowActions={() => [
+          {
+            label: tCommon('edit'),
+            icon: <EditIcon />,
+            disabled: () => !crud.permissions.canEdit,
+            onSelect: crud.openEdit,
+          },
+          {
+            label: tCommon('delete'),
+            icon: <Trash2Icon />,
+            destructive: true,
+            disabled: () => !crud.permissions.canDelete,
+            onSelect: (record) => {
+              void crud.confirmDelete(record);
+            },
+          },
+        ]}
       />
+      <CrudSheet
+        open={crud.isFormOpen}
+        onOpenChange={(open) => {
+          if (!open) crud.closeForm();
+        }}
+        title={crud.selected ? tCommon('edit') : t('createPermission')}
+      >
+        <PermissionForm
+          key={crud.selected?.id ?? 'new'}
+          initialValues={crud.selected}
+          onSubmit={submit}
+        />
+      </CrudSheet>
+    </>
+  );
+}
 
+function ResourcesTab() {
+  const t = useTranslations('admin.permissions');
+  const tCommon = useTranslations('common');
+  const { data: resources = [], isLoading } = useResources();
+  const mutations = useResourceMutations();
+
+  const crud = useCrudResource<Resource>({
+    resource: 'resource',
+    onDelete: async (item) => {
+      await mutations.remove.mutateAsync(item.id);
+    },
+    deleteConfirm: {
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
+    },
+  });
+
+  const submit = async (values: ResourceInput) => {
+    if (crud.selected) {
+      await mutations.update.mutateAsync({ id: crud.selected.id, data: values });
+    } else {
+      await mutations.create.mutateAsync(values);
+    }
+    crud.closeForm();
+  };
+
+  const columns = useMemo<ColumnDef<Resource>[]>(
+    () => [
+      { id: 'name', header: tCommon('name'), accessorKey: 'name' },
+      { id: 'slug', header: tCommon('slug'), accessorKey: 'slug' },
+      { id: 'description', header: tCommon('description'), accessorKey: 'description' },
+    ],
+    [tCommon]
+  );
+
+  return (
+    <>
+      <div className="flex justify-end pb-3">
+        <PermissionButton resource="resource" action="create" onClick={crud.openCreate}>
+          <PlusIcon />
+          {t('createResource')}
+        </PermissionButton>
+      </div>
+      <DataGrid<Resource>
+        data={resources}
+        columns={columns}
+        loading={isLoading}
+        columnVisibilityStorageKey="admin-resources"
+        exportFileName="resources"
+        toolbar={{ search: true, columnVisibility: true, exportable: true }}
+        rowActions={() => [
+          {
+            label: tCommon('edit'),
+            icon: <EditIcon />,
+            disabled: () => !crud.permissions.canEdit,
+            onSelect: crud.openEdit,
+          },
+          {
+            label: tCommon('delete'),
+            icon: <Trash2Icon />,
+            destructive: true,
+            disabled: () => !crud.permissions.canDelete,
+            onSelect: (record) => {
+              void crud.confirmDelete(record);
+            },
+          },
+        ]}
+      />
+      <CrudSheet
+        open={crud.isFormOpen}
+        onOpenChange={(open) => {
+          if (!open) crud.closeForm();
+        }}
+        title={crud.selected ? tCommon('edit') : t('createResource')}
+      >
+        <ResourceForm
+          key={crud.selected?.id ?? 'new'}
+          initialValues={crud.selected}
+          onSubmit={submit}
+        />
+      </CrudSheet>
+    </>
+  );
+}
+
+function ActionsTab() {
+  const t = useTranslations('admin.permissions');
+  const tCommon = useTranslations('common');
+  const { data: actions = [], isLoading } = useActions();
+  const mutations = useActionMutations();
+
+  const crud = useCrudResource<Action>({
+    resource: 'action',
+    onDelete: async (item) => {
+      await mutations.remove.mutateAsync(item.id);
+    },
+    deleteConfirm: {
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
+    },
+  });
+
+  const submit = async (values: ActionInput) => {
+    if (crud.selected) {
+      await mutations.update.mutateAsync({ id: crud.selected.id, data: values });
+    } else {
+      await mutations.create.mutateAsync(values);
+    }
+    crud.closeForm();
+  };
+
+  const columns = useMemo<ColumnDef<Action>[]>(
+    () => [
+      { id: 'name', header: tCommon('name'), accessorKey: 'name' },
+      { id: 'slug', header: tCommon('slug'), accessorKey: 'slug' },
+      { id: 'description', header: tCommon('description'), accessorKey: 'description' },
+    ],
+    [tCommon]
+  );
+
+  return (
+    <>
+      <div className="flex justify-end pb-3">
+        <PermissionButton resource="action" action="create" onClick={crud.openCreate}>
+          <PlusIcon />
+          {t('createAction')}
+        </PermissionButton>
+      </div>
+      <DataGrid<Action>
+        data={actions}
+        columns={columns}
+        loading={isLoading}
+        columnVisibilityStorageKey="admin-actions"
+        exportFileName="actions"
+        toolbar={{ search: true, columnVisibility: true, exportable: true }}
+        rowActions={() => [
+          {
+            label: tCommon('edit'),
+            icon: <EditIcon />,
+            disabled: () => !crud.permissions.canEdit,
+            onSelect: crud.openEdit,
+          },
+          {
+            label: tCommon('delete'),
+            icon: <Trash2Icon />,
+            destructive: true,
+            disabled: () => !crud.permissions.canDelete,
+            onSelect: (record) => {
+              void crud.confirmDelete(record);
+            },
+          },
+        ]}
+      />
+      <CrudSheet
+        open={crud.isFormOpen}
+        onOpenChange={(open) => {
+          if (!open) crud.closeForm();
+        }}
+        title={crud.selected ? tCommon('edit') : t('createAction')}
+      >
+        <ActionForm
+          key={crud.selected?.id ?? 'new'}
+          initialValues={crud.selected}
+          onSubmit={submit}
+        />
+      </CrudSheet>
+    </>
+  );
+}
+
+export default function PermissionsPage() {
+  const t = useTranslations('admin.permissions');
+
+  return (
+    <PageShell title={t('title')} description={t('description')}>
       <Card className="rounded-lg">
         <CardContent className="p-4">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <TabsList>
-                <TabsTrigger value="permissions">
-                  <KeyRoundIcon className="size-4" />
-                  Permissions
-                </TabsTrigger>
-                <TabsTrigger value="resources">
-                  <LayersIcon className="size-4" />
-                  Resources
-                </TabsTrigger>
-                <TabsTrigger value="actions">
-                  <ZapIcon className="size-4" />
-                  Actions
-                </TabsTrigger>
-              </TabsList>
-
-              {activeTab === 'permissions' && canCreatePermission && (
-                <Button onClick={() => setPermissionDrawerVisible(true)}>
-                  <PlusIcon data-icon="inline-start" />
-                  Create permission
-                </Button>
-              )}
-              {activeTab === 'resources' && canCreateResource && (
-                <Button onClick={() => setResourceDrawerVisible(true)}>
-                  <PlusIcon data-icon="inline-start" />
-                  Create resource
-                </Button>
-              )}
-              {activeTab === 'actions' && canCreateAction && (
-                <Button onClick={() => setActionDrawerVisible(true)}>
-                  <PlusIcon data-icon="inline-start" />
-                  Create action
-                </Button>
-              )}
-            </div>
-
+          <Tabs defaultValue="permissions">
+            <TabsList>
+              <TabsTrigger value="permissions">
+                <KeyRoundIcon className="size-4" />
+                {t('tabPermissions')}
+              </TabsTrigger>
+              <TabsTrigger value="resources">
+                <LayersIcon className="size-4" />
+                {t('tabResources')}
+              </TabsTrigger>
+              <TabsTrigger value="actions">
+                <ZapIcon className="size-4" />
+                {t('tabActions')}
+              </TabsTrigger>
+            </TabsList>
             <TabsContent value="permissions" className="mt-4">
-              <DataGrid<PermissionWithRelations>
-                columns={permissionColumns}
-                dataSource={permissions}
-                loading={loading}
-                rowKey="id"
-                storageKey="admin-permissions"
-                onRowDoubleClick={
-                  canEditPermission
-                    ? (record) => {
-                        setSelectedPermission(record);
-                        setPermissionDrawerVisible(true);
-                      }
-                    : undefined
-                }
-              />
+              <PermissionsTab />
             </TabsContent>
             <TabsContent value="resources" className="mt-4">
-              <DataGrid<Resource>
-                columns={resourceColumns}
-                dataSource={resources}
-                loading={loading}
-                rowKey="id"
-                storageKey="admin-resources"
-                onRowDoubleClick={
-                  canEditResource
-                    ? (record) => {
-                        setSelectedResource(record);
-                        setResourceDrawerVisible(true);
-                      }
-                    : undefined
-                }
-              />
+              <ResourcesTab />
             </TabsContent>
             <TabsContent value="actions" className="mt-4">
-              <DataGrid<Action>
-                columns={actionColumns}
-                dataSource={actions}
-                loading={loading}
-                rowKey="id"
-                storageKey="admin-actions"
-                onRowDoubleClick={
-                  canEditAction
-                    ? (record) => {
-                        setSelectedAction(record);
-                        setActionDrawerVisible(true);
-                      }
-                    : undefined
-                }
-              />
+              <ActionsTab />
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-
-      <Sheet open={permissionDrawerVisible} onOpenChange={(open) => !open && closeDrawers()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          <SheetHeader>
-            <SheetTitle>{selectedPermission ? 'Edit permission' : 'Create permission'}</SheetTitle>
-            <SheetDescription>Connect a resource, target and allowed actions.</SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-4">
-            <PermissionForm
-              initialValues={selectedPermission}
-              onSubmit={handleSubmit}
-              loading={formLoading}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={resourceDrawerVisible} onOpenChange={(open) => !open && closeDrawers()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          <SheetHeader>
-            <SheetTitle>{selectedResource ? 'Edit resource' : 'Create resource'}</SheetTitle>
-            <SheetDescription>
-              Resources represent protected areas of the application.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-4">
-            <ResourceForm
-              initialValues={selectedResource}
-              onSubmit={handleSubmit}
-              loading={formLoading}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={actionDrawerVisible} onOpenChange={(open) => !open && closeDrawers()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          <SheetHeader>
-            <SheetTitle>{selectedAction ? 'Edit action' : 'Create action'}</SheetTitle>
-            <SheetDescription>
-              Actions define operations such as view, create, edit and delete.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-4">
-            <ActionForm
-              initialValues={selectedAction}
-              onSubmit={handleSubmit}
-              loading={formLoading}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <ConfirmDialog
-        open={deleteModalVisible}
-        title={`Delete ${itemToDelete?.type ?? 'item'}`}
-        description={`Are you sure you want to delete this ${itemToDelete?.type ?? 'item'}? This action cannot be undone.`}
-        loading={formLoading}
-        onOpenChange={(open) => {
-          setDeleteModalVisible(open);
-          if (!open) setItemToDelete(null);
-        }}
-        onConfirm={handleDelete}
-      />
-    </>
+    </PageShell>
   );
 }

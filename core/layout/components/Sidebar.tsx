@@ -1,8 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboardIcon, ShieldCheckIcon, SparklesIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -12,18 +13,19 @@ interface SidebarProps {
 const navItems = [
   {
     href: '/dashboard',
-    label: 'Dashboard',
+    key: 'dashboard',
     icon: LayoutDashboardIcon,
   },
   {
     href: '/administrations',
-    label: 'Administration',
+    key: 'administration',
     icon: ShieldCheckIcon,
   },
-];
+] as const;
 
 export default function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
+  const t = useTranslations('nav');
 
   return (
     <aside
@@ -48,6 +50,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         {navItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
+          const label = t(item.key);
 
           return (
             <Link
@@ -60,10 +63,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
                 collapsed && 'justify-center px-0'
               )}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? label : undefined}
             >
               <Icon className="size-4 shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              {!collapsed && <span className="truncate">{label}</span>}
             </Link>
           );
         })}
@@ -74,7 +77,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
           <div className="rounded-lg bg-sidebar-accent/60 p-3">
             <p className="text-xs font-medium">Local-first starter</p>
             <p className="mt-1 text-xs leading-5 text-sidebar-foreground/60">
-              Docker, Drizzle and Auth.js are wired for clone-to-run development.
+              Docker, Drizzle, Auth.js & TanStack are wired for clone-to-run development.
             </p>
           </div>
         ) : (

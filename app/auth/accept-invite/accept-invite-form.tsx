@@ -1,103 +1,108 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { LockIcon, UserIcon } from 'lucide-react';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { postRequest } from '@/lib/apiClient';
+import { Form, FormField, SubmitButton } from '@/components/forms';
+import { Link } from '@/i18n/navigation';
+import { inviteAcceptSchema } from '@/lib/validation/admin';
+import { authApi, type InviteAcceptInput } from '@/lib/api/client';
 
 export default function AcceptInviteForm() {
+  const t = useTranslations('auth');
   const searchParams = useSearchParams();
-  const [token, setToken] = useState(searchParams.get('token') ?? '');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [password, setPassword] = useState('');
   const [done, setDone] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const schema = inviteAcceptSchema as unknown as z.ZodType<InviteAcceptInput>;
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    try {
-      await postRequest('/auth/accept-invite', { token, firstName, lastName, password });
-      setDone(true);
-    } finally {
-      setLoading(false);
-    }
+  const submit = async (values: InviteAcceptInput) => {
+    await authApi.acceptInvite(values);
+    setDone(true);
   };
 
   return (
-    <form onSubmit={submit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="token">Token</FieldLabel>
+    <Form<InviteAcceptInput>
+      schema={schema}
+      defaultValues={{
+        token: searchParams.get('token') ?? '',
+        password: '',
+        firstName: '',
+        lastName: '',
+      }}
+      onSubmit={submit}
+    >
+      <FormField<InviteAcceptInput> name="token" label="Token">
+        {(field) => (
           <InputGroup>
             <InputGroupAddon>
               <LockIcon />
             </InputGroupAddon>
             <InputGroupInput
-              id="token"
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-              required
+              id={field.name}
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
             />
           </InputGroup>
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field>
-            <FieldLabel htmlFor="firstName">First name</FieldLabel>
+        )}
+      </FormField>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField<InviteAcceptInput> name="firstName" label={t('firstNameLabel')}>
+          {(field) => (
             <InputGroup>
               <InputGroupAddon>
                 <UserIcon />
               </InputGroupAddon>
               <InputGroupInput
-                id="firstName"
-                value={firstName}
-                onChange={(event) => setFirstName(event.target.value)}
+                id={field.name}
+                value={(field.value as string | undefined) ?? ''}
+                onChange={(event) => field.onChange(event.target.value)}
+                onBlur={field.onBlur}
               />
             </InputGroup>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+          )}
+        </FormField>
+        <FormField<InviteAcceptInput> name="lastName" label={t('lastNameLabel')}>
+          {(field) => (
             <InputGroup>
               <InputGroupAddon>
                 <UserIcon />
               </InputGroupAddon>
               <InputGroupInput
-                id="lastName"
-                value={lastName}
-                onChange={(event) => setLastName(event.target.value)}
+                id={field.name}
+                value={(field.value as string | undefined) ?? ''}
+                onChange={(event) => field.onChange(event.target.value)}
+                onBlur={field.onBlur}
               />
             </InputGroup>
-          </Field>
-        </div>
-        <Field>
-          <FieldLabel htmlFor="password">Password</FieldLabel>
+          )}
+        </FormField>
+      </div>
+      <FormField<InviteAcceptInput> name="password" label={t('passwordLabel')}>
+        {(field) => (
           <InputGroup>
             <InputGroupAddon>
               <LockIcon />
             </InputGroupAddon>
             <InputGroupInput
-              id="password"
+              id={field.name}
               type="password"
               minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
             />
           </InputGroup>
-        </Field>
-        {done ? (
-          <Button render={<Link href="/auth/login" />}>Sign in</Button>
-        ) : (
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Creating...' : 'Accept invitation'}
-          </Button>
         )}
-      </FieldGroup>
-    </form>
+      </FormField>
+      {done ? (
+        <Button render={<Link href="/auth/login" />}>{t('loginLink')}</Button>
+      ) : (
+        <SubmitButton>{t('submitAccept')}</SubmitButton>
+      )}
+    </Form>
   );
 }

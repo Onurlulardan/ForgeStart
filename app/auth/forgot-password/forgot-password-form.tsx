@@ -1,77 +1,86 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { CopyIcon, MailIcon } from 'lucide-react';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Form, FormField, SubmitButton } from '@/components/forms';
+import { Link } from '@/i18n/navigation';
+import { passwordResetRequestSchema } from '@/lib/validation/admin';
 import { postRequest } from '@/lib/apiClient';
+import { useClipboard } from '@/lib/hooks';
+import { useNotification } from '@/contexts/NotificationContext';
+import type { PasswordResetRequestInput } from '@/lib/api/client';
 
 export default function ForgotPasswordForm() {
-  const [email, setEmail] = useState('');
+  const t = useTranslations('auth');
+  const tCommon = useTranslations('common');
   const [resetUrl, setResetUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { copy, copied } = useClipboard();
+  const { showNotification } = useNotification();
+  const schema = passwordResetRequestSchema as unknown as z.ZodType<PasswordResetRequestInput>;
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    try {
-      const response = await postRequest<{ ok: boolean; resetUrl?: string }>(
-        '/auth/password-reset',
-        {
-          email,
-        }
-      );
-      setResetUrl(response.resetUrl ?? null);
-    } finally {
-      setLoading(false);
-    }
+  const submit = async (values: PasswordResetRequestInput) => {
+    const response = await postRequest<{ ok: boolean; resetUrl?: string }>(
+      '/auth/password-reset',
+      values
+    );
+    setResetUrl(response.resetUrl ?? null);
+    showNotification('success', t('forgotSuccess'));
   };
 
   return (
-    <form onSubmit={submit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+    <Form<PasswordResetRequestInput>
+      schema={schema}
+      defaultValues={{ email: '' }}
+      onSubmit={submit}
+    >
+      <FormField<PasswordResetRequestInput>
+        name="email"
+        label={t('emailLabel')}
+        description={t('forgotPasswordDescription')}
+      >
+        {(field) => (
           <InputGroup>
             <InputGroupAddon>
               <MailIcon />
             </InputGroupAddon>
             <InputGroupInput
-              id="email"
+              id={field.name}
               type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
             />
           </InputGroup>
-          <FieldDescription>Existing accounts receive a reset token.</FieldDescription>
-        </Field>
-        {resetUrl && (
-          <Field>
-            <FieldLabel htmlFor="resetUrl">Reset URL</FieldLabel>
-            <div className="flex gap-2">
-              <Input id="resetUrl" value={resetUrl} readOnly />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => navigator.clipboard.writeText(resetUrl)}
-              >
-                <CopyIcon />
-              </Button>
-            </div>
-          </Field>
         )}
-        <Button type="submit" disabled={loading}>
-          {loading ? 'Requesting...' : 'Request reset link'}
-        </Button>
-        <Button render={<Link href="/auth/login" />} type="button" variant="link">
-          Back to sign in
-        </Button>
-      </FieldGroup>
-    </form>
+      </FormField>
+      {resetUrl && (
+        <Field>
+          <FieldLabel htmlFor="resetUrl">{tCommon('details')}</FieldLabel>
+          <div className="flex gap-2">
+            <Input id="resetUrl" value={resetUrl} readOnly />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => copy(resetUrl)}
+              aria-label={tCommon('copy')}
+            >
+              <CopyIcon />
+            </Button>
+          </div>
+          {copied && <FieldDescription>{tCommon('copied')}</FieldDescription>}
+        </Field>
+      )}
+      <SubmitButton>{t('submitForgot')}</SubmitButton>
+      <Button render={<Link href="/auth/login" />} type="button" variant="link">
+        {t('loginLink')}
+      </Button>
+    </Form>
   );
 }

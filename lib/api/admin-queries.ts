@@ -12,7 +12,7 @@ import {
   userRoles,
   users,
 } from '@/db/schema';
-import type { Action, Organization, Permission, Resource, Role, User } from '@/db/types';
+import type { Organization, Permission, Role, User } from '@/db/types';
 
 export type UserRoleRelation = {
   role: Pick<Role, 'id' | 'name' | 'description'>;
@@ -30,7 +30,8 @@ export type SafeUser = Omit<User, 'passwordHash'> & {
 };
 
 function stripPasswordHash(user: User): Omit<User, 'passwordHash'> {
-  const { passwordHash: _passwordHash, ...safeUser } = user;
+  const { passwordHash: _password, ...safeUser } = user;
+  void _password;
   return safeUser;
 }
 

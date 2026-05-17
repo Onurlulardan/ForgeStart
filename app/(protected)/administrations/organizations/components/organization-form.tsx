@@ -1,150 +1,72 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { Organization, OrgStatus } from '@/db/types';
-import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { getRequest } from '@/lib/apiClient';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
+import { Form, FormInput, FormSelect, SubmitButton } from '@/components/forms';
+import { organizationSchema } from '@/lib/validation/admin';
+import { useAvailableParents } from '@/lib/query';
+import { OrgStatus } from '@/db/types';
+import type { Organization, OrganizationInput } from '@/lib/api/client';
 
-export interface OrganizationFormData {
-  name: string;
-  slug: string;
-  status: OrgStatus;
-  parentId: string | null;
+const NO_PARENT_VALUE = '__no_parent__';
+
+export interface OrganizationFormProps {
+  initialValues?: Organization | null;
+  onSubmit: (values: OrganizationInput) => Promise<void>;
 }
 
-interface OrganizationFormProps {
-  initialValues?: Organization;
-  onSubmit: (values: OrganizationFormData) => Promise<void> | void;
-  loading?: boolean;
-}
+export function OrganizationForm({ initialValues, onSubmit }: OrganizationFormProps) {
+  const t = useTranslations('admin.organizations');
+  const tCommon = useTranslations('common');
+  const tStatus = useTranslations('status');
+  const { data: parents = [] } = useAvailableParents(initialValues?.id);
+  const schema = organizationSchema as unknown as z.ZodType<OrganizationInput>;
 
-const emptyForm: OrganizationFormData = {
-  name: '',
-  slug: '',
-  status: OrgStatus.ACTIVE,
-  parentId: null,
-};
-
-export function OrganizationForm({ initialValues, onSubmit, loading }: OrganizationFormProps) {
-  const [values, setValues] = useState<OrganizationFormData>(emptyForm);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-
-  useEffect(() => {
-    const fetchAvailableParents = async () => {
-      try {
-        const url = initialValues
-          ? `/administrations/organizations/available-parents?organizationId=${initialValues.id}`
-          : '/administrations/organizations/available-parents';
-
-        const data = await getRequest<Organization[]>(url);
-        setOrganizations(data);
-      } catch (error) {
-        console.error('Failed to fetch available parents:', error);
-      }
-    };
-
-    fetchAvailableParents();
-  }, [initialValues]);
-
-  useEffect(() => {
-    setValues({
+  const defaultValues = useMemo<OrganizationInput>(
+    () => ({
       name: initialValues?.name ?? '',
       slug: initialValues?.slug ?? '',
       status: initialValues?.status ?? OrgStatus.ACTIVE,
       parentId: initialValues?.parentId ?? null,
-    });
-  }, [initialValues]);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await onSubmit(values);
-  };
+    }),
+    [initialValues]
+  );
 
   return (
-    <form onSubmit={handleSubmit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="organizationName">Name</FieldLabel>
-          <Input
-            id="organizationName"
-            value={values.name}
-            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="organizationSlug">Slug</FieldLabel>
-          <Input
-            id="organizationSlug"
-            pattern="^[a-z0-9-]+$"
-            value={values.slug}
-            onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel>Status</FieldLabel>
-          <Select
-            value={values.status}
-            onValueChange={(status) =>
-              setValues((current) => ({ ...current, status: status as OrgStatus }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {Object.values(OrgStatus).map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field>
-          <FieldLabel>Parent organization</FieldLabel>
-          <Select
-            value={values.parentId ?? 'root'}
-            onValueChange={(value) =>
-              setValues((current) => ({ ...current, parentId: value === 'root' ? null : value }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select parent organization" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="root">No parent</SelectItem>
-                {organizations.map((organization) => (
-                  <SelectItem key={organization.id} value={organization.id}>
-                    {organization.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Saving...' : initialValues ? 'Update organization' : 'Create organization'}
-        </Button>
-      </FieldGroup>
-    </form>
+    <Form<OrganizationInput>
+      schema={schema}
+      defaultValues={defaultValues as never}
+      values={defaultValues as never}
+      onSubmit={onSubmit}
+    >
+      <FormInput name="name" label={tCommon('name')} />
+      <FormInput name="slug" label={tCommon('slug')} pattern="^[a-z0-9-]+$" />
+      <FormSelect
+        name="status"
+        label={tCommon('status')}
+        options={[
+          { value: OrgStatus.ACTIVE, label: tStatus('active') },
+          { value: OrgStatus.INACTIVE, label: tStatus('inactive') },
+          { value: OrgStatus.SUSPENDED, label: tStatus('suspended') },
+        ]}
+      />
+      <FormSelect
+        name="parentId"
+        label={t('parentLabel')}
+        options={[
+          { value: NO_PARENT_VALUE, label: t('noParent') },
+          ...parents.map((organization) => ({
+            value: organization.id,
+            label: organization.name,
+          })),
+        ]}
+        emptyValue={NO_PARENT_VALUE}
+        placeholder={t('parentLabel')}
+      />
+      <SubmitButton className="w-full">
+        {initialValues ? tCommon('update') : tCommon('create')}
+      </SubmitButton>
+    </Form>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/core/layout/components/Navbar';
 import Sidebar from '@/core/layout/components/Sidebar';
@@ -29,16 +28,9 @@ function ProtectedSkeleton() {
   );
 }
 
-function ProtectedContent({ children }: { children: React.ReactNode }) {
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const [collapsed, setCollapsed] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
-    }
-  }, [status, router]);
 
   if (status === 'loading' || !session) {
     return <ProtectedSkeleton />;
@@ -60,8 +52,4 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
-}
-
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  return <ProtectedContent>{children}</ProtectedContent>;
 }

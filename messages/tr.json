@@ -1,0 +1,343 @@
+{
+  "common": {
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "create": "Oluştur",
+    "update": "Güncelle",
+    "remove": "Kaldır",
+    "add": "Ekle",
+    "close": "Kapat",
+    "confirm": "Onayla",
+    "back": "Geri",
+    "next": "İleri",
+    "previous": "Önceki",
+    "search": "Ara",
+    "filter": "Filtrele",
+    "loading": "Yükleniyor...",
+    "saving": "Kaydediliyor...",
+    "working": "İşleniyor...",
+    "noData": "Veri bulunamadı",
+    "yes": "Evet",
+    "no": "Hayır",
+    "all": "Tümü",
+    "actions": "İşlemler",
+    "status": "Durum",
+    "name": "Ad",
+    "description": "Açıklama",
+    "slug": "Slug",
+    "email": "E-posta",
+    "password": "Şifre",
+    "submit": "Gönder",
+    "more": "Daha fazla",
+    "noActions": "İşlem yok",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "details": "Detaylar",
+    "view": "Görüntüle",
+    "manage": "Yönet",
+    "settings": "Ayarlar",
+    "selected": "seçildi",
+    "deselectAll": "Seçimi temizle"
+  },
+  "status": {
+    "active": "Aktif",
+    "inactive": "Pasif",
+    "suspended": "Askıya alınmış",
+    "pending": "Beklemede",
+    "accepted": "Kabul edildi",
+    "revoked": "İptal edildi",
+    "expired": "Süresi doldu",
+    "success": "Başarılı",
+    "failed": "Başarısız"
+  },
+  "nav": {
+    "dashboard": "Pano",
+    "administration": "Yönetim",
+    "menu": "Menü"
+  },
+  "userMenu": {
+    "profile": "Profilim",
+    "signOut": "Çıkış Yap",
+    "switchTheme": "Temayı değiştir",
+    "language": "Dil",
+    "lightMode": "Açık tema",
+    "darkMode": "Koyu tema",
+    "systemMode": "Sistem"
+  },
+  "auth": {
+    "loginTitle": "Giriş Yap",
+    "loginDescription": "Hesabınıza erişmek için e-posta ve şifrenizi girin.",
+    "registerTitle": "Kayıt Ol",
+    "registerDescription": "Yeni bir hesap oluşturmak için aşağıdaki formu doldurun.",
+    "forgotPasswordTitle": "Şifremi Unuttum",
+    "forgotPasswordDescription": "Sıfırlama linki almak için e-posta adresinizi girin.",
+    "resetPasswordTitle": "Şifre Sıfırla",
+    "resetPasswordDescription": "Yeni şifrenizi belirleyin.",
+    "acceptInviteTitle": "Daveti Kabul Et",
+    "acceptInviteDescription": "Hesabınızı oluşturarak organizasyona katılın.",
+    "emailLabel": "E-posta",
+    "passwordLabel": "Şifre",
+    "newPasswordLabel": "Yeni şifre",
+    "currentPasswordLabel": "Mevcut şifre",
+    "confirmPasswordLabel": "Şifreyi tekrar girin",
+    "firstNameLabel": "Ad",
+    "lastNameLabel": "Soyad",
+    "phoneLabel": "Telefon",
+    "submitLogin": "Giriş yap",
+    "submitRegister": "Kayıt ol",
+    "submitReset": "Şifreyi sıfırla",
+    "submitForgot": "Sıfırlama linki gönder",
+    "submitAccept": "Daveti kabul et",
+    "noAccount": "Hesabınız yok mu?",
+    "hasAccount": "Zaten hesabınız var mı?",
+    "forgotPassword": "Şifremi unuttum",
+    "loginLink": "Giriş yap",
+    "registerLink": "Kayıt ol",
+    "invalidCredentials": "E-posta veya şifre hatalı",
+    "loginSuccess": "Giriş başarılı",
+    "registerSuccess": "Hesabınız oluşturuldu",
+    "resetSuccess": "Şifreniz güncellendi",
+    "forgotSuccess": "Sıfırlama linki e-postanıza gönderildi"
+  },
+  "admin": {
+    "hubTitle": "Yönetim Paneli",
+    "hubDescription": "Sistem yönetimi, RBAC, organizasyonlar ve daha fazlasını yönetin.",
+    "users": {
+      "title": "Kullanıcılar",
+      "description": "Kullanıcı kimliklerini, rol atamalarını ve hesap durumunu yönetin.",
+      "createTitle": "Kullanıcı oluştur",
+      "createDescription": "Yeni bir kullanıcı oluşturun ve başlangıç rollerini atayın.",
+      "editTitle": "Kullanıcı düzenle",
+      "editDescription": "Hesap profilini, rollerini ve durumunu güncelleyin.",
+      "createButton": "Kullanıcı oluştur",
+      "deleteTitle": "Kullanıcıyı sil",
+      "deleteDescription": "Bu kullanıcıyı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+      "columns": {
+        "name": "Ad Soyad",
+        "email": "E-posta",
+        "roles": "Roller",
+        "status": "Durum",
+        "createdAt": "Oluşturulma"
+      },
+      "noRole": "Rol yok",
+      "passwordHint": "Mevcut şifreyi korumak için boş bırakın.",
+      "rolesLabel": "Roller",
+      "loadingRoles": "Roller yükleniyor...",
+      "noRolesAvailable": "Atanabilecek rol yok."
+    },
+    "organizations": {
+      "title": "Organizasyonlar",
+      "description": "Organizasyon hiyerarşisini, üyeliği ve çalışma alanı durumunu yönetin.",
+      "createTitle": "Organizasyon oluştur",
+      "createDescription": "Yeni bir çalışma alanı ekleyin.",
+      "editTitle": "Organizasyon düzenle",
+      "editDescription": "Organizasyon kimliği ve hiyerarşiyi güncelleyin.",
+      "createButton": "Organizasyon oluştur",
+      "deleteTitle": "Organizasyonu sil",
+      "deleteDescription": "Bu organizasyonu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+      "addUsersTitle": "Kullanıcı ekle",
+      "addUsersDescription": "Bu organizasyona kullanıcılar ekleyin.",
+      "addUsers": "Kullanıcı ekle",
+      "parentLabel": "Üst organizasyon",
+      "noParent": "Üst yok",
+      "columns": {
+        "organization": "Organizasyon",
+        "status": "Durum",
+        "members": "Üye"
+      }
+    },
+    "roles": {
+      "title": "Roller",
+      "description": "Rolleri ve bunlara bağlı yetkileri yönetin.",
+      "createTitle": "Rol oluştur",
+      "createDescription": "Yeni bir rol tanımlayın.",
+      "editTitle": "Rol düzenle",
+      "editDescription": "Rolün bilgilerini güncelleyin.",
+      "createButton": "Rol oluştur",
+      "deleteTitle": "Rolü sil",
+      "deleteDescription": "Bu rolü silmek istediğinize emin misiniz?",
+      "scopeGlobal": "Global",
+      "scopeOrganization": "Organizasyon",
+      "isDefault": "Varsayılan rol",
+      "columns": {
+        "name": "Ad",
+        "scope": "Kapsam",
+        "users": "Kullanıcı"
+      }
+    },
+    "permissions": {
+      "title": "İzinler",
+      "description": "Kaynak, eylem ve izin tanımlarını yönetin.",
+      "tabPermissions": "İzinler",
+      "tabResources": "Kaynaklar",
+      "tabActions": "Eylemler",
+      "createPermission": "İzin oluştur",
+      "createResource": "Kaynak oluştur",
+      "createAction": "Eylem oluştur",
+      "deleteTitle": "Sil",
+      "deleteDescription": "Bu kaydı silmek istediğinize emin misiniz?",
+      "fields": {
+        "resource": "Kaynak",
+        "target": "Hedef",
+        "actions": "Eylemler",
+        "user": "Kullanıcı",
+        "role": "Rol",
+        "organization": "Organizasyon"
+      }
+    },
+    "rbac": {
+      "title": "RBAC Matrisi",
+      "description": "Roller, kaynaklar ve eylemler arasındaki izin matrisini yönetin.",
+      "selectRole": "Rol seçin",
+      "saving": "Kaydediliyor...",
+      "saved": "Kaydedildi"
+    },
+    "invitations": {
+      "title": "Davetler",
+      "description": "Yeni kullanıcı davetlerini yönetin.",
+      "createTitle": "Davet gönder",
+      "createDescription": "Yeni bir kullanıcı davet edin.",
+      "createButton": "Davet gönder",
+      "revoke": "İptal et",
+      "revokeTitle": "Daveti iptal et",
+      "revokeDescription": "Bu daveti iptal etmek istediğinize emin misiniz?",
+      "expiresInDays": "Geçerlilik (gün)",
+      "columns": {
+        "email": "E-posta",
+        "role": "Rol",
+        "organization": "Organizasyon",
+        "status": "Durum",
+        "expiresAt": "Son geçerlilik",
+        "invitedBy": "Davet eden"
+      }
+    },
+    "apiKeys": {
+      "title": "API Anahtarları",
+      "description": "Servis API anahtarlarını yönetin.",
+      "createTitle": "API anahtarı oluştur",
+      "createDescription": "Yeni bir servis anahtarı oluşturun. Anahtar yalnızca bir kez gösterilir.",
+      "createButton": "API anahtarı oluştur",
+      "revoke": "İptal et",
+      "revokeTitle": "API anahtarını iptal et",
+      "revokeDescription": "Bu anahtarı iptal etmek istediğinize emin misiniz?",
+      "scopesLabel": "Kapsamlar (virgülle ayırın)",
+      "expiresAtLabel": "Son geçerlilik (opsiyonel)",
+      "secretShown": "Anahtarı şimdi kopyalayın — bir daha gösterilmeyecek.",
+      "columns": {
+        "name": "Ad",
+        "prefix": "Önek",
+        "scopes": "Kapsamlar",
+        "lastUsed": "Son kullanım",
+        "expiresAt": "Son geçerlilik",
+        "createdAt": "Oluşturulma",
+        "createdBy": "Oluşturan"
+      }
+    },
+    "auditLogs": {
+      "title": "Denetim Kayıtları",
+      "description": "Sistemde yapılan işlemlerin kaydı.",
+      "columns": {
+        "createdAt": "Tarih",
+        "actor": "Aktör",
+        "action": "İşlem",
+        "resource": "Kaynak",
+        "status": "Durum",
+        "message": "Mesaj",
+        "ip": "IP",
+        "userAgent": "User Agent"
+      }
+    },
+    "securityLogs": {
+      "title": "Güvenlik Kayıtları",
+      "description": "Kimlik doğrulama ve güvenlik olaylarının kaydı.",
+      "columns": {
+        "createdAt": "Tarih",
+        "email": "E-posta",
+        "type": "Tip",
+        "status": "Durum",
+        "message": "Mesaj",
+        "ip": "IP",
+        "userAgent": "User Agent"
+      }
+    },
+    "system": {
+      "title": "Sistem Ayarları",
+      "description": "Uygulama yapılandırmasını yönetin.",
+      "saveButton": "Ayarları kaydet",
+      "saved": "Ayarlar güncellendi"
+    },
+    "profile": {
+      "title": "Profilim",
+      "description": "Hesap bilgilerinizi güncelleyin.",
+      "avatarUrl": "Avatar URL",
+      "passwordSection": "Şifre değiştir",
+      "currentPasswordHint": "Yeni şifre belirlemek için mevcut şifrenizi girin.",
+      "newPasswordHint": "Şifreyi değiştirmiyorsanız boş bırakın."
+    }
+  },
+  "dashboard": {
+    "title": "Pano",
+    "description": "Sistemin genel durumu.",
+    "totalOrganizations": "Toplam Organizasyon",
+    "totalUsers": "Toplam Kullanıcı",
+    "activeUsers": "Aktif Kullanıcı",
+    "runtimeHealth": "Çalışma Zamanı Durumu",
+    "appVersion": "Uygulama Sürümü",
+    "gitCommit": "Git Commit",
+    "database": "Veritabanı",
+    "migrations": "Migrasyonlar",
+    "healthy": "Sağlıklı",
+    "unhealthy": "Sorunlu"
+  },
+  "dataGrid": {
+    "search": "Kayıt ara...",
+    "columns": "Sütunlar",
+    "export": "Dışa aktar",
+    "exportCsv": "CSV indir",
+    "exportXlsx": "Excel indir",
+    "showing": "{count, plural, =0 {Kayıt yok} other {# kayıt gösteriliyor}}",
+    "totalRecords": "{count, plural, =0 {Toplam 0 kayıt} other {Toplam # kayıt}}",
+    "perPage": "Sayfa başına {size}",
+    "page": "Sayfa {page} / {total}",
+    "rowsSelected": "{count, plural, =0 {Satır seçilmedi} other {# satır seçildi}}",
+    "noRecords": "Kayıt bulunamadı",
+    "loading": "Yükleniyor..."
+  },
+  "forms": {
+    "required": "Bu alan zorunludur",
+    "invalidEmail": "Geçerli bir e-posta adresi girin",
+    "minLength": "En az {min} karakter girin",
+    "maxLength": "En fazla {max} karakter girilebilir",
+    "invalidPattern": "Geçersiz format",
+    "passwordTooShort": "Şifre en az 8 karakter olmalıdır",
+    "unsavedChangesTitle": "Kaydedilmemiş değişiklikler",
+    "unsavedChangesDescription": "Değişiklikleriniz kaybolacak. Devam etmek istediğinize emin misiniz?",
+    "discard": "Yine de çık",
+    "keepEditing": "Düzenlemeye devam et"
+  },
+  "permission": {
+    "denied": "Bu işlem için yetkiniz yok",
+    "deniedShort": "Yetki yok"
+  },
+  "errors": {
+    "generic": "Bir hata oluştu",
+    "network": "Ağ hatası, lütfen bağlantınızı kontrol edin",
+    "unauthorized": "Yetkisiz erişim",
+    "forbidden": "Erişim reddedildi",
+    "notFound": "Kayıt bulunamadı",
+    "validation": "Doğrulama hatası",
+    "serverError": "Sunucu hatası"
+  },
+  "feedback": {
+    "createSuccess": "Başarıyla oluşturuldu",
+    "updateSuccess": "Başarıyla güncellendi",
+    "deleteSuccess": "Başarıyla silindi",
+    "operationSuccess": "İşlem başarıyla tamamlandı"
+  },
+  "emptyState": {
+    "title": "Henüz veri yok",
+    "description": "İlk kaydı oluşturarak başlayın."
+  }
+}

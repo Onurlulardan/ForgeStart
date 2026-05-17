@@ -1,113 +1,104 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { LockIcon, MailIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { z } from 'zod';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Form, FormField, SubmitButton } from '@/components/forms';
+import { Link } from '@/i18n/navigation';
 import { useNotification } from '@/contexts/NotificationContext';
 
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 export default function LoginForm() {
-  const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const t = useTranslations('auth');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
   const { showNotification } = useNotification();
 
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
+  const submit = async (values: LoginFormValues) => {
+    const result = await signIn('credentials', {
+      email: values.email.toLowerCase(),
+      password: values.password,
+      redirect: false,
+    });
 
-    try {
-      const result = await signIn('credentials', {
-        email: email.toLowerCase(),
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        showNotification('error', 'Login failed', 'Invalid email or password');
-        return;
-      }
-
-      showNotification('success', 'Signed in', 'Welcome back.');
-      router.push('/dashboard');
-    } catch (error) {
-      showNotification(
-        'error',
-        'Login failed',
-        error instanceof Error ? error.message : 'An error occurred during login'
-      );
-    } finally {
-      setLoading(false);
+    if (result?.error) {
+      showNotification('error', t('invalidCredentials'));
+      return;
     }
+
+    showNotification('success', t('loginSuccess'));
+    router.push(callbackUrl);
   };
 
   return (
-    <form onSubmit={onSubmit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+    <Form<LoginFormValues>
+      schema={loginSchema}
+      defaultValues={{ email: '', password: '' }}
+      onSubmit={submit}
+    >
+      <FormField<LoginFormValues> name="email" label={t('emailLabel')}>
+        {(field) => (
           <InputGroup>
             <InputGroupAddon>
               <MailIcon />
             </InputGroupAddon>
             <InputGroupInput
-              id="email"
+              id={field.name}
               type="email"
               autoComplete="email"
-              placeholder="superadmin@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
+              placeholder="you@example.com"
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
             />
           </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="password">Password</FieldLabel>
+        )}
+      </FormField>
+      <FormField<LoginFormValues> name="password" label={t('passwordLabel')}>
+        {(field) => (
           <InputGroup>
             <InputGroupAddon>
               <LockIcon />
             </InputGroupAddon>
             <InputGroupInput
-              id="password"
+              id={field.name}
               type="password"
               autoComplete="current-password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
             />
           </InputGroup>
-        </Field>
-
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign in'}
-        </Button>
-
-        <p className="text-center text-sm text-muted-foreground">
-          <Link
-            href="/auth/forgot-password"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-          >
-            Forgot password?
-          </Link>
-        </p>
-
-        <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <Link
-            href="/auth/register"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-          >
-            Create one
-          </Link>
-        </p>
-      </FieldGroup>
-    </form>
+        )}
+      </FormField>
+      <SubmitButton className="w-full">{t('submitLogin')}</SubmitButton>
+      <p className="text-center text-sm text-muted-foreground">
+        <Link
+          href="/auth/forgot-password"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          {t('forgotPassword')}
+        </Link>
+      </p>
+      <p className="text-center text-sm text-muted-foreground">
+        {t('noAccount')}{' '}
+        <Link
+          href="/auth/register"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          {t('registerLink')}
+        </Link>
+      </p>
+    </Form>
   );
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import {
   LayoutDashboardIcon,
@@ -13,6 +12,7 @@ import {
   SunIcon,
   UserIcon,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,27 +24,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Link } from '@/i18n/navigation';
 import { useTheme } from '@/app/providers';
+import { initials as makeInitials } from '@/lib/formatters';
+import { LanguageSwitcher } from './language-switcher';
 
 interface NavbarProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
 }
 
-function getInitials(firstName?: string | null, lastName?: string | null, email?: string | null) {
-  const initials = [firstName, lastName]
-    .filter(Boolean)
-    .map((part) => part?.[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
-  return initials || email?.slice(0, 2).toUpperCase() || 'NS';
+function buildInitials(firstName?: string | null, lastName?: string | null, email?: string | null) {
+  const initials = makeInitials([firstName, lastName].filter(Boolean).join(' '));
+  if (initials) return initials;
+  return email?.slice(0, 2).toUpperCase() ?? 'NS';
 }
 
 export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
   const { data: session } = useSession();
   const { isDark, toggleTheme } = useTheme();
+  const t = useTranslations('userMenu');
+  const tNav = useTranslations('nav');
   const user = session?.user;
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
 
@@ -59,28 +59,24 @@ export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? (
-              <PanelLeftOpenIcon data-icon="inline-start" />
-            ) : (
-              <PanelLeftCloseIcon data-icon="inline-start" />
-            )}
+            {collapsed ? <PanelLeftOpenIcon /> : <PanelLeftCloseIcon />}
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="ghost" size="icon" className="lg:hidden" />}
             >
-              <MenuIcon data-icon="inline-start" />
+              <MenuIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-52">
               <DropdownMenuGroup>
                 <DropdownMenuItem render={<Link href="/dashboard" />}>
                   <LayoutDashboardIcon />
-                  Dashboard
+                  {tNav('dashboard')}
                 </DropdownMenuItem>
                 <DropdownMenuItem render={<Link href="/administrations" />}>
                   <SettingsIcon />
-                  Administration
+                  {tNav('administration')}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -89,14 +85,20 @@ export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
           <div className="min-w-0">
             <p className="text-sm font-semibold leading-none">Workspace Console</p>
             <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
-              Drizzle, Auth.js and PostgreSQL starter operations
+              Drizzle, Auth.js, TanStack & PostgreSQL starter
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-            {isDark ? <SunIcon data-icon="inline-start" /> : <MoonIcon data-icon="inline-start" />}
+        <div className="flex items-center gap-1">
+          <LanguageSwitcher />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={t('switchTheme')}
+          >
+            {isDark ? <SunIcon /> : <MoonIcon />}
           </Button>
 
           <DropdownMenu>
@@ -104,7 +106,7 @@ export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
               <Avatar className="size-7">
                 <AvatarImage src={user?.avatar ?? undefined} alt={user?.email ?? 'User'} />
                 <AvatarFallback>
-                  {getInitials(user?.firstName, user?.lastName, user?.email)}
+                  {buildInitials(user?.firstName, user?.lastName, user?.email)}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden max-w-36 truncate text-sm font-medium md:inline">
@@ -124,11 +126,11 @@ export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
               <DropdownMenuGroup>
                 <DropdownMenuItem render={<Link href="/administrations/users/profile/edit" />}>
                   <UserIcon />
-                  Profile settings
+                  {t('profile')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/auth/login' })}>
                   <LogOutIcon />
-                  Log out
+                  {t('signOut')}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>

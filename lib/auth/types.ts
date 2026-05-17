@@ -59,9 +59,33 @@ declare module 'next-auth' {
     user: SessionUser;
   }
 
-  interface User extends SessionUser {}
+  interface User {
+    id: string;
+    email: string;
+    avatar: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    emailVerified: Date | null;
+    userRoles: UserRoleWithDetails[];
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    permissions: PermissionPayload[];
+    memberships: OrganizationMembership[];
+  }
 }
 
 declare module 'next-auth/jwt' {
-  interface JWT extends SessionUser {}
+  interface JWT {
+    id: string;
+    email: string;
+    avatar: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    emailVerified: Date | null;
+    userRoles: UserRoleWithDetails[];
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    permissions: PermissionPayload[];
+    memberships: OrganizationMembership[];
+  }
 }

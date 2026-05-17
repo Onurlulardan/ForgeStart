@@ -1,270 +1,147 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { EditIcon, PlusIcon, Trash2Icon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { ConfirmDialog } from '@/components/app/confirm-dialog';
-import { EntityActions } from '@/components/app/entity-actions';
-import { PageHeader } from '@/components/app/page-header';
+import { DataGrid } from '@/components/data-grid';
+import { PageShell, CrudSheet } from '@/components/layout';
+import { PermissionButton } from '@/components/permission';
 import { StatusBadge } from '@/components/app/status-badge';
-import { usePermission } from '@/lib/auth/client-permissions';
-import { DataGrid } from '@/core/components/datagrid';
-import { User, UserStatus } from '@/db/types';
-import { getRequest, postRequest, putRequest, deleteRequest } from '@/lib/apiClient';
-import { UserForm, UserFormData } from './components/user-form';
-
-type Role = {
-  id: string;
-  name: string;
-  description: string | null;
-};
-
-type UserRole = {
-  role: Role;
-};
-
-type UserWithoutPassword = Omit<User, 'passwordHash'> & {
-  userRoles?: UserRole[];
-};
+import { useCrudResource } from '@/lib/hooks';
+import { useUsers, useUserMutations } from '@/lib/query';
+import type { UserWithoutPassword } from '@/lib/api/client';
+import { UserForm, type UserFormValues } from './components/user-form';
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<UserWithoutPassword[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserWithoutPassword | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<UserWithoutPassword | null>(null);
-  const canCreate = usePermission('user', 'create');
-  const canEdit = usePermission('user', 'edit');
-  const canDelete = usePermission('user', 'delete');
+  const t = useTranslations('admin.users');
+  const tCommon = useTranslations('common');
+  const { data: users = [], isLoading } = useUsers();
+  const mutations = useUserMutations();
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const data = await getRequest<UserWithoutPassword[]>('/administrations/users');
-      setUsers(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const handleDelete = async () => {
-    if (!userToDelete) return;
-
-    try {
-      await deleteRequest(`/administrations/users/${userToDelete.id}`);
-      setDeleteModalVisible(false);
-      setUserToDelete(null);
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleSubmit = async (values: UserFormData) => {
-    setFormLoading(true);
-    try {
-      const endpoint = selectedUser
-        ? `/administrations/users/${selectedUser.id}`
-        : '/administrations/users';
-
-      if (selectedUser) {
-        await putRequest(endpoint, values);
-      } else {
-        await postRequest(endpoint, values);
-      }
-
-      setDrawerVisible(false);
-      setSelectedUser(null);
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const columns = [
-    {
-      title: '',
-      key: 'actions',
-      width: 72,
-      render: (record: UserWithoutPassword) => (
-        <EntityActions
-          actions={[
-            {
-              label: 'Edit',
-              icon: <EditIcon />,
-              disabled: !canEdit,
-              onSelect: () => {
-                setSelectedUser(record);
-                setDrawerVisible(true);
-              },
-            },
-            {
-              label: 'Delete',
-              icon: <Trash2Icon />,
-              destructive: true,
-              disabled: !canDelete,
-              onSelect: () => {
-                setUserToDelete(record);
-                setDeleteModalVisible(true);
-              },
-            },
-          ]}
-        />
-      ),
+  const crud = useCrudResource<UserWithoutPassword>({
+    resource: 'user',
+    onDelete: async (user) => {
+      await mutations.remove.mutateAsync(user.id);
     },
-    {
-      title: 'Name',
-      key: 'name',
-      render: (record: UserWithoutPassword) => {
-        const name = [record.firstName, record.lastName].filter(Boolean).join(' ');
-        return (
-          <div>
-            <div className="font-medium">{name || record.email}</div>
-            <div className="text-xs text-muted-foreground">{record.email}</div>
-          </div>
-        );
+    deleteConfirm: {
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
+    },
+  });
+
+  const submit = async (values: UserFormValues) => {
+    if (crud.selected) {
+      await mutations.update.mutateAsync({ id: crud.selected.id, data: values });
+    } else {
+      await mutations.create.mutateAsync(values as never);
+    }
+    crud.closeForm();
+  };
+
+  const columns = useMemo<ColumnDef<UserWithoutPassword>[]>(
+    () => [
+      {
+        id: 'name',
+        header: t('columns.name'),
+        cell: ({ row }) => {
+          const record = row.original;
+          const name = [record.firstName, record.lastName].filter(Boolean).join(' ');
+          return (
+            <div>
+              <div className="font-medium">{name || record.email}</div>
+              <div className="text-xs text-muted-foreground">{record.email}</div>
+            </div>
+          );
+        },
       },
-    },
-    {
-      title: 'Roles',
-      key: 'roles',
-      render: (record: UserWithoutPassword) => (
-        <div className="flex flex-wrap gap-1">
-          {record.userRoles?.length ? (
-            record.userRoles.map((userRole) => (
-              <Badge key={userRole.role.id} variant="secondary" className="rounded-md">
-                {userRole.role.name}
+      {
+        id: 'roles',
+        header: t('columns.roles'),
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.userRoles?.length ? (
+              row.original.userRoles.map((userRole) => (
+                <Badge key={userRole.role.id} variant="secondary" className="rounded-md">
+                  {userRole.role.name}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="outline" className="rounded-md">
+                {t('noRole')}
               </Badge>
-            ))
-          ) : (
-            <Badge variant="outline" className="rounded-md">
-              No role
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: UserStatus) => <StatusBadge status={status} />,
-    },
-  ];
+            )}
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        header: t('columns.status'),
+        accessorKey: 'status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+    ],
+    [t]
+  );
 
   return (
-    <>
-      <PageHeader
-        title="Users"
-        description="Manage user identities, role assignments and account status."
-        actions={
-          canCreate && (
-            <Button
-              onClick={() => {
-                setSelectedUser(null);
-                setDrawerVisible(true);
-              }}
-            >
-              <PlusIcon data-icon="inline-start" />
-              Create user
-            </Button>
-          )
-        }
-      />
-
+    <PageShell
+      title={t('title')}
+      description={t('description')}
+      actions={
+        <PermissionButton resource="user" action="create" onClick={crud.openCreate}>
+          <PlusIcon />
+          {t('createButton')}
+        </PermissionButton>
+      }
+    >
       <Card className="rounded-lg">
         <CardContent className="p-4">
           <DataGrid<UserWithoutPassword>
+            data={users}
             columns={columns}
-            dataSource={users}
-            rowKey="id"
-            storageKey="admin-users"
-            loading={loading}
-            onRowDoubleClick={
-              canEdit
-                ? (record) => {
-                    setSelectedUser(record);
-                    setDrawerVisible(true);
-                  }
-                : undefined
-            }
+            loading={isLoading}
+            columnVisibilityStorageKey="admin-users"
+            exportFileName="users"
+            toolbar={{ search: true, columnVisibility: true, exportable: true }}
+            rowActions={() => [
+              {
+                label: tCommon('edit'),
+                icon: <EditIcon />,
+                disabled: () => !crud.permissions.canEdit,
+                onSelect: crud.openEdit,
+              },
+              {
+                label: tCommon('delete'),
+                icon: <Trash2Icon />,
+                destructive: true,
+                disabled: () => !crud.permissions.canDelete,
+                onSelect: (record) => {
+                  void crud.confirmDelete(record);
+                },
+              },
+            ]}
+            onRowDoubleClick={crud.permissions.canEdit ? crud.openEdit : undefined}
           />
         </CardContent>
       </Card>
 
-      <Sheet
-        open={drawerVisible}
+      <CrudSheet
+        open={crud.isFormOpen}
         onOpenChange={(open) => {
-          setDrawerVisible(open);
-          if (!open) setSelectedUser(null);
+          if (!open) crud.closeForm();
         }}
+        title={crud.selected ? t('editTitle') : t('createTitle')}
+        description={crud.selected ? t('editDescription') : t('createDescription')}
       >
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          <SheetHeader>
-            <SheetTitle>{selectedUser ? 'Edit user' : 'Create user'}</SheetTitle>
-            <SheetDescription>
-              {selectedUser
-                ? 'Update account profile, roles and status.'
-                : 'Create a user and assign starter roles.'}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-4">
-            <UserForm
-              initialValues={
-                selectedUser
-                  ? {
-                      ...selectedUser,
-                      userRoles: selectedUser.userRoles,
-                    }
-                  : undefined
-              }
-              onSubmit={handleSubmit}
-              loading={formLoading}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <ConfirmDialog
-        open={deleteModalVisible}
-        title="Delete user"
-        description={
-          <>
-            Are you sure you want to delete{' '}
-            <span className="font-medium text-foreground">
-              {userToDelete
-                ? [userToDelete.firstName, userToDelete.lastName].filter(Boolean).join(' ') ||
-                  userToDelete.email
-                : 'this user'}
-            </span>
-            ? This action cannot be undone.
-          </>
-        }
-        onOpenChange={(open) => {
-          setDeleteModalVisible(open);
-          if (!open) setUserToDelete(null);
-        }}
-        onConfirm={handleDelete}
-      />
-    </>
+        <UserForm
+          key={crud.selected?.id ?? 'new'}
+          initialValues={crud.selected ?? undefined}
+          onSubmit={submit}
+        />
+      </CrudSheet>
+    </PageShell>
   );
 }

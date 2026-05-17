@@ -1,0 +1,343 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "remove": "Remove",
+    "add": "Add",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "working": "Working...",
+    "noData": "No data",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "actions": "Actions",
+    "status": "Status",
+    "name": "Name",
+    "description": "Description",
+    "slug": "Slug",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Submit",
+    "more": "More",
+    "noActions": "No actions",
+    "copy": "Copy",
+    "copied": "Copied",
+    "details": "Details",
+    "view": "View",
+    "manage": "Manage",
+    "settings": "Settings",
+    "selected": "selected",
+    "deselectAll": "Clear selection"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "suspended": "Suspended",
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "revoked": "Revoked",
+    "expired": "Expired",
+    "success": "Success",
+    "failed": "Failed"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "administration": "Administration",
+    "menu": "Menu"
+  },
+  "userMenu": {
+    "profile": "My profile",
+    "signOut": "Sign out",
+    "switchTheme": "Switch theme",
+    "language": "Language",
+    "lightMode": "Light",
+    "darkMode": "Dark",
+    "systemMode": "System"
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginDescription": "Enter your email and password to access your account.",
+    "registerTitle": "Create account",
+    "registerDescription": "Fill the form below to create a new account.",
+    "forgotPasswordTitle": "Forgot password",
+    "forgotPasswordDescription": "Enter your email to receive a reset link.",
+    "resetPasswordTitle": "Reset password",
+    "resetPasswordDescription": "Choose a new password.",
+    "acceptInviteTitle": "Accept invitation",
+    "acceptInviteDescription": "Create your account and join the organization.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "newPasswordLabel": "New password",
+    "currentPasswordLabel": "Current password",
+    "confirmPasswordLabel": "Confirm password",
+    "firstNameLabel": "First name",
+    "lastNameLabel": "Last name",
+    "phoneLabel": "Phone",
+    "submitLogin": "Sign in",
+    "submitRegister": "Create account",
+    "submitReset": "Reset password",
+    "submitForgot": "Send reset link",
+    "submitAccept": "Accept invitation",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "forgotPassword": "Forgot password",
+    "loginLink": "Sign in",
+    "registerLink": "Create account",
+    "invalidCredentials": "Invalid email or password",
+    "loginSuccess": "Signed in successfully",
+    "registerSuccess": "Account created",
+    "resetSuccess": "Password updated",
+    "forgotSuccess": "Reset link sent to your inbox"
+  },
+  "admin": {
+    "hubTitle": "Administration",
+    "hubDescription": "Manage system administration, RBAC, organizations, and more.",
+    "users": {
+      "title": "Users",
+      "description": "Manage user identities, role assignments and account status.",
+      "createTitle": "Create user",
+      "createDescription": "Create a user and assign starter roles.",
+      "editTitle": "Edit user",
+      "editDescription": "Update account profile, roles and status.",
+      "createButton": "Create user",
+      "deleteTitle": "Delete user",
+      "deleteDescription": "Are you sure you want to delete this user? This action cannot be undone.",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "roles": "Roles",
+        "status": "Status",
+        "createdAt": "Created"
+      },
+      "noRole": "No role",
+      "passwordHint": "Leave blank to keep the current password.",
+      "rolesLabel": "Roles",
+      "loadingRoles": "Loading roles...",
+      "noRolesAvailable": "No roles available."
+    },
+    "organizations": {
+      "title": "Organizations",
+      "description": "Manage organization hierarchy, membership and workspace status.",
+      "createTitle": "Create organization",
+      "createDescription": "Add a new workspace node.",
+      "editTitle": "Edit organization",
+      "editDescription": "Update workspace identity and hierarchy.",
+      "createButton": "Create organization",
+      "deleteTitle": "Delete organization",
+      "deleteDescription": "Are you sure you want to delete this organization? This action cannot be undone.",
+      "addUsersTitle": "Add users",
+      "addUsersDescription": "Add users to this organization.",
+      "addUsers": "Add users",
+      "parentLabel": "Parent organization",
+      "noParent": "No parent",
+      "columns": {
+        "organization": "Organization",
+        "status": "Status",
+        "members": "Members"
+      }
+    },
+    "roles": {
+      "title": "Roles",
+      "description": "Manage roles and their associated permissions.",
+      "createTitle": "Create role",
+      "createDescription": "Define a new role.",
+      "editTitle": "Edit role",
+      "editDescription": "Update role details.",
+      "createButton": "Create role",
+      "deleteTitle": "Delete role",
+      "deleteDescription": "Are you sure you want to delete this role?",
+      "scopeGlobal": "Global",
+      "scopeOrganization": "Organization",
+      "isDefault": "Default role",
+      "columns": {
+        "name": "Name",
+        "scope": "Scope",
+        "users": "Users"
+      }
+    },
+    "permissions": {
+      "title": "Permissions",
+      "description": "Manage resources, actions and permission grants.",
+      "tabPermissions": "Permissions",
+      "tabResources": "Resources",
+      "tabActions": "Actions",
+      "createPermission": "Create permission",
+      "createResource": "Create resource",
+      "createAction": "Create action",
+      "deleteTitle": "Delete",
+      "deleteDescription": "Are you sure you want to delete this record?",
+      "fields": {
+        "resource": "Resource",
+        "target": "Target",
+        "actions": "Actions",
+        "user": "User",
+        "role": "Role",
+        "organization": "Organization"
+      }
+    },
+    "rbac": {
+      "title": "RBAC Matrix",
+      "description": "Manage the permission matrix between roles, resources and actions.",
+      "selectRole": "Select role",
+      "saving": "Saving...",
+      "saved": "Saved"
+    },
+    "invitations": {
+      "title": "Invitations",
+      "description": "Manage new user invitations.",
+      "createTitle": "Send invitation",
+      "createDescription": "Invite a new user.",
+      "createButton": "Send invitation",
+      "revoke": "Revoke",
+      "revokeTitle": "Revoke invitation",
+      "revokeDescription": "Are you sure you want to revoke this invitation?",
+      "expiresInDays": "Expires in (days)",
+      "columns": {
+        "email": "Email",
+        "role": "Role",
+        "organization": "Organization",
+        "status": "Status",
+        "expiresAt": "Expires",
+        "invitedBy": "Invited by"
+      }
+    },
+    "apiKeys": {
+      "title": "API Keys",
+      "description": "Manage service API keys.",
+      "createTitle": "Create API key",
+      "createDescription": "Create a new service key. The secret is shown only once.",
+      "createButton": "Create API key",
+      "revoke": "Revoke",
+      "revokeTitle": "Revoke API key",
+      "revokeDescription": "Are you sure you want to revoke this key?",
+      "scopesLabel": "Scopes (comma separated)",
+      "expiresAtLabel": "Expires at (optional)",
+      "secretShown": "Copy the key now — it won't be shown again.",
+      "columns": {
+        "name": "Name",
+        "prefix": "Prefix",
+        "scopes": "Scopes",
+        "lastUsed": "Last used",
+        "expiresAt": "Expires",
+        "createdAt": "Created",
+        "createdBy": "Created by"
+      }
+    },
+    "auditLogs": {
+      "title": "Audit Logs",
+      "description": "System action audit trail.",
+      "columns": {
+        "createdAt": "Date",
+        "actor": "Actor",
+        "action": "Action",
+        "resource": "Resource",
+        "status": "Status",
+        "message": "Message",
+        "ip": "IP",
+        "userAgent": "User Agent"
+      }
+    },
+    "securityLogs": {
+      "title": "Security Logs",
+      "description": "Authentication and security event log.",
+      "columns": {
+        "createdAt": "Date",
+        "email": "Email",
+        "type": "Type",
+        "status": "Status",
+        "message": "Message",
+        "ip": "IP",
+        "userAgent": "User Agent"
+      }
+    },
+    "system": {
+      "title": "System Settings",
+      "description": "Manage application configuration.",
+      "saveButton": "Save settings",
+      "saved": "Settings updated"
+    },
+    "profile": {
+      "title": "My profile",
+      "description": "Update your account information.",
+      "avatarUrl": "Avatar URL",
+      "passwordSection": "Change password",
+      "currentPasswordHint": "Enter your current password to set a new one.",
+      "newPasswordHint": "Leave blank if you don't want to change the password."
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "System overview.",
+    "totalOrganizations": "Total Organizations",
+    "totalUsers": "Total Users",
+    "activeUsers": "Active Users",
+    "runtimeHealth": "Runtime Health",
+    "appVersion": "App Version",
+    "gitCommit": "Git Commit",
+    "database": "Database",
+    "migrations": "Migrations",
+    "healthy": "Healthy",
+    "unhealthy": "Unhealthy"
+  },
+  "dataGrid": {
+    "search": "Search records...",
+    "columns": "Columns",
+    "export": "Export",
+    "exportCsv": "Download CSV",
+    "exportXlsx": "Download Excel",
+    "showing": "{count, plural, =0 {No records} =1 {# record shown} other {# records shown}}",
+    "totalRecords": "{count, plural, =0 {0 records} =1 {# record total} other {# records total}}",
+    "perPage": "{size} per page",
+    "page": "Page {page} of {total}",
+    "rowsSelected": "{count, plural, =0 {No rows selected} =1 {# row selected} other {# rows selected}}",
+    "noRecords": "No records found",
+    "loading": "Loading..."
+  },
+  "forms": {
+    "required": "This field is required",
+    "invalidEmail": "Enter a valid email address",
+    "minLength": "Enter at least {min} characters",
+    "maxLength": "Enter at most {max} characters",
+    "invalidPattern": "Invalid format",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "unsavedChangesTitle": "Unsaved changes",
+    "unsavedChangesDescription": "Your changes will be lost. Are you sure you want to continue?",
+    "discard": "Discard",
+    "keepEditing": "Keep editing"
+  },
+  "permission": {
+    "denied": "You don't have permission for this action",
+    "deniedShort": "No permission"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "network": "Network error, please check your connection",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "notFound": "Not found",
+    "validation": "Validation error",
+    "serverError": "Server error"
+  },
+  "feedback": {
+    "createSuccess": "Created successfully",
+    "updateSuccess": "Updated successfully",
+    "deleteSuccess": "Deleted successfully",
+    "operationSuccess": "Operation completed successfully"
+  },
+  "emptyState": {
+    "title": "No data yet",
+    "description": "Get started by creating your first record."
+  }
+}

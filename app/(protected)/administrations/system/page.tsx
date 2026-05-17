@@ -1,6 +1,5 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
 import {
   ActivityIcon,
   CheckCircle2Icon,
@@ -9,18 +8,32 @@ import {
   SaveIcon,
   ServerCogIcon,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PageHeader } from '@/components/app/page-header';
-import { getRequest, putRequest } from '@/lib/apiClient';
-import type { AppSetting } from '@/db/types';
+import { PageShell } from '@/components/layout';
+import {
+  Form,
+  FormField,
+  SubmitButton,
+} from '@/components/forms';
+import { Input } from '@/components/ui/input';
+import { useAppSettings, useAppSettingsMutation } from '@/lib/query';
+import { getRequest } from '@/lib/apiClient';
+import type { AppSettingItem, SettingsUpdateInput } from '@/lib/api/client';
 
-type HealthStatus = {
+interface HealthStatus {
   ok: boolean;
   checkedAt: string;
   app: {
@@ -39,79 +52,102 @@ type HealthStatus = {
       latestMigration: string | null;
     };
   };
-};
+}
 
-type DoctorStatus = {
+interface DoctorStatus {
   ok: boolean;
-  checkedAt: string;
   checks: { name: string; ok: boolean }[];
   environment: Record<string, string | null>;
-  database: unknown;
-};
+}
 
-export default function SystemPage() {
-  const [health, setHealth] = useState<HealthStatus | null>(null);
-  const [doctor, setDoctor] = useState<DoctorStatus | null>(null);
-  const [settings, setSettings] = useState<AppSetting[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+const settingsFormSchema = z.object({
+  values: z.record(z.string(), z.string()),
+});
+type SettingsFormValues = z.infer<typeof settingsFormSchema>;
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [healthData, doctorData, settingsData] = await Promise.all([
-        getRequest<HealthStatus>('/health'),
-        getRequest<DoctorStatus>('/setup/doctor'),
-        getRequest<AppSetting[]>('/administrations/settings'),
-      ]);
-      setHealth(healthData);
-      setDoctor(doctorData);
-      setSettings(settingsData);
-    } finally {
-      setLoading(false);
-    }
+function SettingsForm({ settings }: { settings: AppSettingItem[] }) {
+  const t = useTranslations('admin.system');
+  const mutation = useAppSettingsMutation();
+
+  const defaultValues: SettingsFormValues = {
+    values: Object.fromEntries(settings.map((setting) => [setting.key, setting.value])),
   };
 
-  useEffect(() => {
-    loadData().catch(console.error);
-  }, []);
-
-  const updateSetting = (key: string, value: string) => {
-    setSettings((current) =>
-      current.map((setting) => (setting.key === key ? { ...setting, value } : setting))
-    );
-  };
-
-  const saveSettings = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSaving(true);
-    try {
-      const updated = await putRequest<AppSetting[]>('/administrations/settings', {
-        settings: settings.map((setting) => ({ key: setting.key, value: setting.value })),
-      });
-      setSettings(updated);
-    } finally {
-      setSaving(false);
-    }
+  const submit = async (values: SettingsFormValues) => {
+    const payload: SettingsUpdateInput = {
+      settings: Object.entries(values.values).map(([key, value]) => ({ key, value })),
+    };
+    await mutation.mutateAsync(payload);
   };
 
   return (
-    <>
-      <PageHeader
-        title="System center"
-        description="Check local readiness, runtime health, migration status and starter settings."
-        actions={
-          <Button variant="outline" onClick={() => loadData()}>
-            <RefreshCwIcon data-icon="inline-start" />
-            Refresh
-          </Button>
-        }
-      />
+    <Form<SettingsFormValues>
+      schema={settingsFormSchema as unknown as z.ZodType<SettingsFormValues>}
+      defaultValues={defaultValues as never}
+      values={defaultValues as never}
+      onSubmit={submit}
+    >
+      {settings.map((setting) => (
+        <FormField<SettingsFormValues>
+          key={setting.key}
+          name={`values.${setting.key}` as never}
+          label={setting.label}
+          description={setting.description ?? undefined}
+        >
+          {(field) => (
+            <Input
+              id={field.name}
+              value={(field.value as string | undefined) ?? ''}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
+              type={setting.isSecret ? 'password' : 'text'}
+              placeholder={setting.description ?? setting.key}
+            />
+          )}
+        </FormField>
+      ))}
+      <div className="flex justify-end">
+        <SubmitButton>
+          <SaveIcon />
+          {t('saveButton')}
+        </SubmitButton>
+      </div>
+    </Form>
+  );
+}
 
+export default function SystemPage() {
+  const t = useTranslations('admin.system');
+  const tCommon = useTranslations('common');
+  const { data: settings, isLoading: loadingSettings } = useAppSettings();
+  const {
+    data: health,
+    isLoading: loadingHealth,
+    refetch: refetchHealth,
+  } = useQuery({
+    queryKey: ['system', 'health'],
+    queryFn: () => getRequest<HealthStatus>('/health'),
+  });
+  const { data: doctor } = useQuery({
+    queryKey: ['system', 'doctor'],
+    queryFn: () => getRequest<DoctorStatus>('/setup/doctor'),
+  });
+
+  return (
+    <PageShell
+      title={t('title')}
+      description={t('description')}
+      actions={
+        <Button variant="outline" onClick={() => refetchHealth()}>
+          <RefreshCwIcon />
+          {tCommon('next')}
+        </Button>
+      }
+    >
       <section className="grid gap-4 md:grid-cols-3">
         {[
           {
-            label: 'Application',
+            label: tCommon('settings'),
             value: health ? `${health.app.name} ${health.app.version}` : null,
             detail: health?.app.environment,
             icon: ServerCogIcon,
@@ -139,7 +175,7 @@ export default function SystemPage() {
                   <div>
                     <CardDescription>{item.label}</CardDescription>
                     <CardTitle className="mt-2">
-                      {loading ? <Skeleton className="h-7 w-32" /> : item.value}
+                      {loadingHealth ? <Skeleton className="h-7 w-32" /> : item.value}
                     </CardTitle>
                   </div>
                   <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
@@ -158,7 +194,7 @@ export default function SystemPage() {
       <Tabs defaultValue="doctor">
         <TabsList>
           <TabsTrigger value="doctor">Doctor</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="settings">{tCommon('settings')}</TabsTrigger>
           <TabsTrigger value="runtime">Runtime</TabsTrigger>
         </TabsList>
 
@@ -190,7 +226,7 @@ export default function SystemPage() {
                   >
                     <span className="text-sm font-medium">{key}</span>
                     <span className="max-w-64 truncate text-sm text-muted-foreground">
-                      {value ?? 'missing'}
+                      {value ?? '—'}
                     </span>
                   </div>
                 ))}
@@ -201,33 +237,17 @@ export default function SystemPage() {
         <TabsContent value="settings" className="mt-4">
           <Card className="rounded-lg">
             <CardHeader>
-              <CardTitle>Application settings</CardTitle>
+              <CardTitle>{tCommon('settings')}</CardTitle>
               <CardDescription>
                 Project defaults that commonly change after cloning.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={saveSettings}>
-                <FieldGroup>
-                  {settings.map((setting) => (
-                    <Field key={setting.key}>
-                      <FieldLabel htmlFor={setting.key}>{setting.label}</FieldLabel>
-                      <Input
-                        id={setting.key}
-                        value={setting.value}
-                        onChange={(event) => updateSetting(setting.key, event.target.value)}
-                        placeholder={setting.description ?? setting.key}
-                      />
-                    </Field>
-                  ))}
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={saving}>
-                      <SaveIcon data-icon="inline-start" />
-                      {saving ? 'Saving...' : 'Save settings'}
-                    </Button>
-                  </div>
-                </FieldGroup>
-              </form>
+              {loadingSettings ? (
+                <Skeleton className="h-40 w-full" />
+              ) : (
+                <SettingsForm settings={settings ?? []} />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -258,6 +278,6 @@ export default function SystemPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </>
+    </PageShell>
   );
 }

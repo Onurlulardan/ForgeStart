@@ -65,7 +65,8 @@ export async function POST(request: Request) {
       return user;
     });
 
-    const { passwordHash: _passwordHash, ...safeUser } = createdUser;
+    const { passwordHash: _password, ...safeUser } = createdUser;
+    void _password;
     return NextResponse.json(safeUser, { status: 201 });
   } catch (error) {
     return handleRouteError('[USERS_POST]', error);

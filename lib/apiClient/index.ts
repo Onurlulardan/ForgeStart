@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { signOut } from 'next-auth/react';
 import axiosRetry from 'axios-retry';
+import { parseApiError } from '@/lib/api/errors';
 import { RequestOptions, ShowNotificationFunction } from './types/types';
 
 const axiosInstance = axios.create({
@@ -56,7 +57,8 @@ axiosInstance.interceptors.response.use(
       }
     }
 
-    const errorMessage = (error.response?.data as string) || error.message;
+    const parsed = parseApiError(error);
+    const errorMessage = parsed.message || 'An error occurred';
 
     if (typeof window !== 'undefined') {
       const showNotification = window.__showNotification as ShowNotificationFunction;

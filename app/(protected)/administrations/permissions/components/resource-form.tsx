@@ -1,84 +1,43 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { Resource } from '@/db/types';
-import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
+import { Form, FormInput, FormTextarea, SubmitButton } from '@/components/forms';
+import { resourceSchema } from '@/lib/validation/admin';
+import type { Resource, ResourceInput } from '@/lib/api/client';
 
-export interface ResourceFormData {
-  name: string;
-  slug: string;
-  description: string | null;
-}
-
-interface ResourceFormProps {
+export interface ResourceFormProps {
   initialValues?: Resource | null;
-  onSubmit: (values: ResourceFormData) => Promise<void>;
-  loading?: boolean;
+  onSubmit: (values: ResourceInput) => Promise<void>;
 }
 
-const emptyForm: ResourceFormData = {
-  name: '',
-  slug: '',
-  description: null,
-};
+export function ResourceForm({ initialValues, onSubmit }: ResourceFormProps) {
+  const tCommon = useTranslations('common');
+  const schema = resourceSchema as unknown as z.ZodType<ResourceInput>;
 
-export function ResourceForm({ initialValues, onSubmit, loading }: ResourceFormProps) {
-  const [values, setValues] = useState<ResourceFormData>(emptyForm);
-
-  useEffect(() => {
-    setValues({
+  const defaultValues = useMemo<ResourceInput>(
+    () => ({
       name: initialValues?.name ?? '',
       slug: initialValues?.slug ?? '',
       description: initialValues?.description ?? null,
-    });
-  }, [initialValues]);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await onSubmit(values);
-  };
+    }),
+    [initialValues]
+  );
 
   return (
-    <form onSubmit={handleSubmit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="resourceName">Resource name</FieldLabel>
-          <Input
-            id="resourceName"
-            value={values.name}
-            minLength={3}
-            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
-            required
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="resourceSlug">Slug</FieldLabel>
-          <Input
-            id="resourceSlug"
-            pattern="^[a-z0-9-_]+$"
-            value={values.slug}
-            onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))}
-            required
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="resourceDescription">Description</FieldLabel>
-          <Textarea
-            id="resourceDescription"
-            rows={4}
-            value={values.description ?? ''}
-            onChange={(event) =>
-              setValues((current) => ({ ...current, description: event.target.value || null }))
-            }
-          />
-        </Field>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Saving...' : initialValues ? 'Update resource' : 'Create resource'}
-        </Button>
-      </FieldGroup>
-    </form>
+    <Form<ResourceInput>
+      schema={schema}
+      defaultValues={defaultValues as never}
+      values={defaultValues as never}
+      onSubmit={onSubmit}
+    >
+      <FormInput name="name" label={tCommon('name')} minLength={3} />
+      <FormInput name="slug" label={tCommon('slug')} pattern="^[a-z0-9-_]+$" />
+      <FormTextarea name="description" label={tCommon('description')} rows={4} />
+      <SubmitButton className="w-full">
+        {initialValues ? tCommon('update') : tCommon('create')}
+      </SubmitButton>
+    </Form>
   );
 }

@@ -1,156 +1,76 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { Role, Organization } from '@/db/types';
-import { Button } from '@/components/ui/button';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { getRequest } from '@/lib/apiClient';
+  Form,
+  FormInput,
+  FormSelect,
+  FormSwitch,
+  FormTextarea,
+  SubmitButton,
+} from '@/components/forms';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { roleSchema } from '@/lib/validation/admin';
+import { useOrganizations } from '@/lib/query';
+import type { Role, RoleInput } from '@/lib/api/client';
 
-export interface RoleFormData {
-  name: string;
-  description: string | null;
-  isDefault: boolean;
-  organizationId: string | null;
-}
-
-interface RoleFormProps {
+export interface RoleFormProps {
   initialValues?: Role | null;
-  onSubmit: (values: RoleFormData) => Promise<void>;
-  loading?: boolean;
+  onSubmit: (values: RoleInput) => Promise<void>;
 }
 
-const emptyForm: RoleFormData = {
-  name: '',
-  description: null,
-  isDefault: false,
-  organizationId: null,
-};
+const GLOBAL_VALUE = '__global__';
 
-export function RoleForm({ initialValues, onSubmit, loading }: RoleFormProps) {
-  const [values, setValues] = useState<RoleFormData>(emptyForm);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [loadingOrgs, setLoadingOrgs] = useState(false);
+export function RoleForm({ initialValues, onSubmit }: RoleFormProps) {
+  const t = useTranslations('admin.roles');
+  const tCommon = useTranslations('common');
+  const { data: organizations = [], isLoading: loadingOrgs } = useOrganizations();
+  const schema = roleSchema as unknown as z.ZodType<RoleInput>;
 
-  useEffect(() => {
-    setValues({
+  const defaultValues = useMemo<RoleInput>(
+    () => ({
       name: initialValues?.name ?? '',
       description: initialValues?.description ?? null,
       isDefault: initialValues?.isDefault ?? false,
       organizationId: initialValues?.organizationId ?? null,
-    });
-  }, [initialValues]);
-
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      setLoadingOrgs(true);
-      try {
-        const data = await getRequest<Organization[]>('/administrations/organizations');
-        setOrganizations(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoadingOrgs(false);
-      }
-    };
-
-    fetchOrganizations();
-  }, []);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await onSubmit(values);
-  };
+    }),
+    [initialValues]
+  );
 
   return (
-    <form onSubmit={handleSubmit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="roleName">Role name</FieldLabel>
-          <Input
-            id="roleName"
-            value={values.name}
-            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
-            minLength={3}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="roleDescription">Description</FieldLabel>
-          <Textarea
-            id="roleDescription"
-            rows={4}
-            maxLength={500}
-            value={values.description ?? ''}
-            onChange={(event) =>
-              setValues((current) => ({ ...current, description: event.target.value || null }))
-            }
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel>Organization</FieldLabel>
-          <Select
-            value={values.organizationId ?? 'global'}
-            onValueChange={(value) =>
-              setValues((current) => ({
-                ...current,
-                organizationId: value === 'global' ? null : value,
-              }))
-            }
-            disabled={loadingOrgs}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select organization" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="global">Global role</SelectItem>
-                {organizations.map((organization) => (
-                  <SelectItem key={organization.id} value={organization.id}>
-                    {organization.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <FieldDescription>Global roles apply across all organizations.</FieldDescription>
-        </Field>
-
-        <Field orientation="horizontal">
-          <Switch
-            checked={values.isDefault}
-            onCheckedChange={(checked) =>
-              setValues((current) => ({ ...current, isDefault: Boolean(checked) }))
-            }
-            aria-label="Default role"
-          />
-          <div>
-            <FieldLabel>Default role</FieldLabel>
-            <FieldDescription>Automatically assign this role to new members.</FieldDescription>
-          </div>
-        </Field>
-
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => setValues(emptyForm)}>
-            Reset
-          </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : initialValues ? 'Update role' : 'Create role'}
-          </Button>
-        </div>
-      </FieldGroup>
-    </form>
+    <Form<RoleInput>
+      schema={schema}
+      defaultValues={defaultValues as never}
+      values={defaultValues as never}
+      onSubmit={onSubmit}
+    >
+      <FormInput name="name" label={tCommon('name')} minLength={3} />
+      <FormTextarea name="description" label={tCommon('description')} rows={4} maxLength={500} />
+      <Field>
+        <FieldLabel>{t('scopeGlobal')}</FieldLabel>
+        <FormSelect
+          name="organizationId"
+          options={[
+            { value: GLOBAL_VALUE, label: t('scopeGlobal') },
+            ...organizations.map((organization) => ({
+              value: organization.id,
+              label: organization.name,
+            })),
+          ]}
+          emptyValue={GLOBAL_VALUE}
+          placeholder={t('scopeGlobal')}
+          disabled={loadingOrgs}
+        />
+        <FieldDescription>
+          {t('scopeGlobal')} — global roles apply across all organizations.
+        </FieldDescription>
+      </Field>
+      <FormSwitch name="isDefault" label={t('isDefault')} />
+      <SubmitButton className="w-full">
+        {initialValues ? tCommon('update') : tCommon('create')}
+      </SubmitButton>
+    </Form>
   );
 }

@@ -1,12 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import {
-  ArrowRightIcon,
   ActivityIcon,
   AppWindowIcon,
+  ArrowRightIcon,
   Building2Icon,
   ClipboardListIcon,
   KeyRoundIcon,
@@ -18,6 +17,7 @@ import {
   UsersIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -27,141 +27,139 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { PageHeader } from '@/components/app/page-header';
-import { Badge } from '@/components/ui/badge';
+import { PageShell } from '@/components/layout';
+import { Link } from '@/i18n/navigation';
 import { usePermission } from '@/lib/auth/client-permissions';
+import { initials } from '@/lib/formatters';
 
-const adminCards = [
+interface AdminCard {
+  titleKey: string;
+  descriptionKey: string;
+  href: string;
+  permission: [string, string];
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const ADMIN_CARDS: AdminCard[] = [
   {
-    title: 'Users',
-    description: 'Create accounts, assign roles and control account status.',
+    titleKey: 'admin.users.title',
+    descriptionKey: 'admin.users.description',
     href: '/administrations/users',
     permission: ['user', 'view'],
     icon: UsersIcon,
   },
   {
-    title: 'Organizations',
-    description: 'Maintain workspace hierarchy, membership and organization status.',
+    titleKey: 'admin.organizations.title',
+    descriptionKey: 'admin.organizations.description',
     href: '/administrations/organizations',
     permission: ['organization', 'view'],
     icon: Building2Icon,
   },
   {
-    title: 'Roles',
-    description: 'Model global and organization-scoped access roles.',
+    titleKey: 'admin.roles.title',
+    descriptionKey: 'admin.roles.description',
     href: '/administrations/roles',
     permission: ['role', 'view'],
     icon: ShieldCheckIcon,
   },
   {
-    title: 'Permissions',
-    description: 'Connect resources, actions and access targets in one place.',
+    titleKey: 'admin.permissions.title',
+    descriptionKey: 'admin.permissions.description',
     href: '/administrations/permissions',
     permission: ['permission', 'view'],
     icon: KeyRoundIcon,
   },
   {
-    title: 'RBAC matrix',
-    description: 'Edit role grants across resources and actions in a compact matrix.',
+    titleKey: 'admin.rbac.title',
+    descriptionKey: 'admin.rbac.description',
     href: '/administrations/rbac',
     permission: ['permission', 'edit'],
     icon: ClipboardListIcon,
   },
   {
-    title: 'Invitations',
-    description: 'Invite users with role and organization assignment.',
+    titleKey: 'admin.invitations.title',
+    descriptionKey: 'admin.invitations.description',
     href: '/administrations/invitations',
     permission: ['invitation', 'view'],
     icon: UserPlusIcon,
   },
   {
-    title: 'API keys',
-    description: 'Issue scoped service credentials for integrations.',
+    titleKey: 'admin.apiKeys.title',
+    descriptionKey: 'admin.apiKeys.description',
     href: '/administrations/api-keys',
     permission: ['api-key', 'view'],
     icon: AppWindowIcon,
   },
   {
-    title: 'Security logs',
-    description: 'Review authentication attempts and security-relevant events.',
+    titleKey: 'admin.securityLogs.title',
+    descriptionKey: 'admin.securityLogs.description',
     href: '/administrations/security-logs',
     permission: ['security-log', 'view'],
     icon: LockKeyholeIcon,
   },
   {
-    title: 'Audit logs',
-    description: 'Review operational changes across admin workflows.',
+    titleKey: 'admin.auditLogs.title',
+    descriptionKey: 'admin.auditLogs.description',
     href: '/administrations/audit-logs',
     permission: ['audit-log', 'view'],
     icon: ActivityIcon,
   },
   {
-    title: 'System center',
-    description: 'Check health, migration status, setup doctor and app settings.',
+    titleKey: 'admin.system.title',
+    descriptionKey: 'admin.system.description',
     href: '/administrations/system',
     permission: ['system', 'view'],
     icon: SlidersHorizontalIcon,
   },
-] as const;
+];
 
-function initials(firstName?: string | null, lastName?: string | null, email?: string | null) {
+function PermittedCard({ card }: { card: AdminCard }) {
+  const t = useTranslations();
+  const allowed = usePermission(card.permission[0], card.permission[1]);
+  if (!allowed) return null;
+
+  const Icon = card.icon;
+
   return (
-    [firstName, lastName]
-      .filter(Boolean)
-      .map((part) => part?.[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() ||
-    email?.slice(0, 2).toUpperCase() ||
-    'NS'
+    <Card className="rounded-lg">
+      <CardHeader>
+        <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+          <Icon className="size-5" />
+        </div>
+        <CardTitle>{t(card.titleKey)}</CardTitle>
+        <CardDescription>{t(card.descriptionKey)}</CardDescription>
+      </CardHeader>
+      <CardFooter>
+        <Button render={<Link href={card.href} />} variant="outline" className="w-full">
+          {t('common.view')}
+          <ArrowRightIcon />
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
 
 export default function AdministrationsPage() {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
+  const tUsers = useTranslations('admin.users');
   const { data: session } = useSession();
-  const canViewUsers = usePermission('user', 'view');
-  const canViewOrganizations = usePermission('organization', 'view');
-  const canViewRoles = usePermission('role', 'view');
-  const canViewPermissions = usePermission('permission', 'view');
-  const canEditPermissions = usePermission('permission', 'edit');
-  const canViewSecurityLogs = usePermission('security-log', 'view');
-  const canViewInvitations = usePermission('invitation', 'view');
-  const canViewApiKeys = usePermission('api-key', 'view');
-  const canViewAuditLogs = usePermission('audit-log', 'view');
-  const canViewSystem = usePermission('system', 'view');
-  const permissions = {
-    user: canViewUsers,
-    organization: canViewOrganizations,
-    role: canViewRoles,
-    permission: canViewPermissions,
-    'permission:edit': canEditPermissions,
-    'security-log': canViewSecurityLogs,
-    invitation: canViewInvitations,
-    'api-key': canViewApiKeys,
-    'audit-log': canViewAuditLogs,
-    system: canViewSystem,
-  };
+  const user = session?.user;
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
 
-  if (!session?.user) {
-    redirect('/auth/login');
-  }
-
-  const user = session.user;
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+  if (!user) return null;
 
   return (
-    <>
-      <PageHeader
-        title="Administration"
-        description="Operate users, organizations, roles and permissions from a single starter console."
-      />
-
+    <PageShell title={t('hubTitle')} description={t('hubDescription')}>
       <Card className="rounded-lg">
         <CardContent className="flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <Avatar className="size-14">
               <AvatarImage src={user.avatar ?? undefined} alt={user.email ?? 'User'} />
-              <AvatarFallback>{initials(user.firstName, user.lastName, user.email)}</AvatarFallback>
+              <AvatarFallback>
+                {initials([user.firstName, user.lastName].filter(Boolean).join(' ')) ||
+                  user.email?.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <h2 className="truncate text-lg font-semibold">{fullName || user.email}</h2>
@@ -175,47 +173,24 @@ export default function AdministrationsPage() {
                   ))
                 ) : (
                   <Badge variant="secondary" className="rounded-md">
-                    No role
+                    {tUsers('noRole')}
                   </Badge>
                 )}
               </div>
             </div>
           </div>
           <Button render={<Link href="/administrations/users/profile/edit" />} variant="outline">
-            <UserCogIcon data-icon="inline-start" />
-            Edit profile
+            <UserCogIcon />
+            {tCommon('edit')}
           </Button>
         </CardContent>
       </Card>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {adminCards
-          .filter((card) =>
-            card.permission[1] === 'edit'
-              ? permissions[`${card.permission[0]}:edit` as keyof typeof permissions]
-              : permissions[card.permission[0] as keyof typeof permissions]
-          )
-          .map((card) => {
-            const Icon = card.icon;
-            return (
-              <Card key={card.href} className="rounded-lg">
-                <CardHeader>
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                    <Icon className="size-5" />
-                  </div>
-                  <CardTitle>{card.title}</CardTitle>
-                  <CardDescription>{card.description}</CardDescription>
-                </CardHeader>
-                <CardFooter>
-                  <Button render={<Link href={card.href} />} variant="outline" className="w-full">
-                    Open
-                    <ArrowRightIcon data-icon="inline-end" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
+        {ADMIN_CARDS.map((card) => (
+          <PermittedCard key={card.href} card={card} />
+        ))}
       </section>
-    </>
+    </PageShell>
   );
 }

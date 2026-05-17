@@ -4,6 +4,7 @@ import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import authConfig from './auth.config';
 import { db } from '@/db';
 import { accounts, sessions, users, verificationTokens } from '@/db/schema';
 import { getSessionUserPayload, logSecurityEvent } from '@/lib/auth/session-data';
@@ -18,22 +19,13 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  session: {
-    strategy: 'jwt',
-    maxAge: Number(process.env.AUTH_SESSION_MAX_AGE) || 7 * 24 * 60 * 60,
-    updateAge: Number(process.env.AUTH_SESSION_UPDATE_AGE) || 60 * 60,
-  },
-  pages: {
-    signIn: '/auth/login',
-    newUser: '/auth/register',
-    error: '/auth/error',
-  },
   providers: [
     Credentials({
       name: 'Credentials',
@@ -111,6 +103,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user, trigger }) {
       if (user) {
         Object.assign(token, user);
