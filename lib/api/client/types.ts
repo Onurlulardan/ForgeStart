@@ -78,9 +78,24 @@ export type DashboardStats = {
 };
 
 export type HealthStatus = {
-  status: 'healthy' | 'unhealthy';
-  database: 'connected' | 'disconnected';
-  migrations?: number;
+  ok: boolean;
+  checkedAt: string;
+  app: {
+    name: string;
+    version: string;
+    node: string;
+    environment: string;
+    commit: string | null;
+  };
+  database: {
+    connected: boolean;
+    serverTime: string | null;
+    migrations: {
+      tableExists: boolean;
+      appliedCount: number;
+      latestMigration: string | null;
+    };
+  };
 };
 
 export type VersionInfo = {

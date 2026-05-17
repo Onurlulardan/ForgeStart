@@ -96,17 +96,17 @@ export default function DashboardPage() {
           {[
             {
               label: t('database'),
-              value: health?.database === 'connected' ? t('healthy') : t('unhealthy'),
+              value: health?.database.connected ? t('healthy') : t('unhealthy'),
               icon: DatabaseIcon,
             },
             {
               label: t('migrations'),
-              value: `${health?.migrations ?? 0}`,
+              value: `${health?.database.migrations.appliedCount ?? 0}`,
               icon: ShieldCheckIcon,
             },
             {
               label: t('appVersion'),
-              value: health?.status ?? '—',
+              value: health?.app.version ?? '-',
               icon: GitCommitIcon,
             },
           ].map((item) => {

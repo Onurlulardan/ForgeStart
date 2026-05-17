@@ -6,6 +6,8 @@
 
 ForgeStart is a production-ready Next.js starter for admin-heavy SaaS products. It ships with authentication, RBAC, organizations, invitations, API keys, audit logs, uploads, theming, i18n, Docker, PostgreSQL, Drizzle ORM, and a ready admin shell.
 
+![ForgeStart product preview](public/readme/forgestart-home.png)
+
 ## Quick Start
 
 ```bash
@@ -18,6 +20,12 @@ yarn docker dev
 ```
 
 `yarn docker dev` starts PostgreSQL in Docker, runs Drizzle migrations, seeds the database, and starts Next.js locally with hot reload.
+
+For a richer demo database, run this in a second terminal after the app is ready:
+
+```bash
+yarn db:seed:demo
+```
 
 Default local login:
 
@@ -55,6 +63,8 @@ Change these values in `.env` before sharing or deploying the app.
 - Theme customization and persisted theme tokens
 - Security logs and audit logs
 - Setup doctor, health and version endpoints
+
+![ForgeStart admin console](public/readme/forgestart-showcase.png)
 
 ## Environment
 
