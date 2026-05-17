@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react';
 import { Card, Button, Tag, Typography, Dropdown, MenuProps, Drawer, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
 import { usePermission } from '@/lib/auth/client-permissions';
 import { DataGrid } from '@/core/components/datagrid';
-import { Organization, OrgStatus } from '@/knex/types';
+import { Organization, OrgStatus } from '@/db/types';
 import { OrganizationForm } from './components/organization-form';
 import { AddUsersDrawer } from './components/add-users-drawer';
 import { getRequest, deleteRequest, postRequest, putRequest } from '@/lib/apiClient';
@@ -22,13 +21,11 @@ export default function OrganizationsPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
-  const router = useRouter();
-
   // Permission hooks
   const canCreate = usePermission('organization', 'create');
   const canEdit = usePermission('organization', 'edit');
   const canDelete = usePermission('organization', 'delete');
-  const canAddUsers = usePermission('organization', 'update');
+  const canAddUsers = usePermission('organization', 'edit');
 
   useEffect(() => {
     fetchOrganizations();

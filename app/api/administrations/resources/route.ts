@@ -1,78 +1,44 @@
-import { NextResponse, NextRequest } from 'next/server';
-import knex from '@/knex';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { requirePermission } from '@/lib/auth/server-permissions';
+import { NextResponse } from 'next/server';
+import { eq, or } from 'drizzle-orm';
+import { db } from '@/db';
+import { resources } from '@/db/schema';
+import { listResources } from '@/lib/api/admin-queries';
+import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
+import { requireApiPermission } from '@/lib/auth/server-permissions';
+import { resourceSchema } from '@/lib/validation/admin';
 
-// GET /api/resources
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const authz = await requireApiPermission('resource', 'view');
+    if (!authz.ok) return authz.response;
 
-    await requirePermission('resource', 'view');
-
-    // Get all resources
-    const resources = await knex('Resource').select(
-      'id',
-      'name',
-      'description',
-      'createdAt',
-      'updatedAt'
-    );
-
-    // For each resource, count related permissions
-    for (const resource of resources) {
-      const permissionCount = await knex('Permission')
-        .where({ resourceId: resource.id })
-        .count('id as count')
-        .first();
-      
-      resource._count = {
-        permissions: parseInt(permissionCount?.count?.toString() || '0', 10)
-      };
-    }
-
-    return NextResponse.json(resources);
+    return NextResponse.json(await listResources());
   } catch (error) {
-    console.error('[RESOURCES_GET]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[RESOURCES_GET]', error);
   }
 }
 
-// POST /api/resources
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const authz = await requireApiPermission('resource', 'create');
+    if (!authz.ok) return authz.response;
+
+    const parsed = await parseJson(request, resourceSchema);
+    if (!parsed.ok) return parsed.response;
+
+    const [existingResource] = await db
+      .select({ id: resources.id })
+      .from(resources)
+      .where(or(eq(resources.name, parsed.data.name), eq(resources.slug, parsed.data.slug)))
+      .limit(1);
+
+    if (existingResource) {
+      return jsonError('Resource with this name or slug already exists', 409);
     }
 
-    await requirePermission('resource', 'create');
-
-    const body = await request.json();
-    const { name, description } = body;
-
-    if (!name) {
-      return new NextResponse('Name is required', { status: 400 });
-    }
-
-    // Create resource
-    const [resource] = await knex('Resource')
-      .insert({
-        id: knex.raw('uuid_generate_v4()'),
-        name,
-        description,
-        createdAt: knex.fn.now(),
-        updatedAt: knex.fn.now()
-      })
-      .returning(['id', 'name', 'description', 'createdAt', 'updatedAt']);
-
+    const [resource] = await db.insert(resources).values(parsed.data).returning();
     return NextResponse.json(resource, { status: 201 });
   } catch (error) {
-    console.error('[RESOURCES_POST]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[RESOURCES_POST]', error);
   }
 }

@@ -8,13 +8,11 @@ export const useNotificationSetup = () => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // @ts-ignore
       window.__showNotification = showNotification;
     }
 
     return () => {
       if (typeof window !== 'undefined') {
-        // @ts-ignore
         delete window.__showNotification;
       }
     };

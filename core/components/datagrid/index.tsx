@@ -46,7 +46,6 @@ export function DataGrid<T extends object>({
           showSizeChanger,
           showTotal: (total) => `Total ${total} items`,
           pageSizeOptions,
-          size: 'default',
           className: 'pagination-with-pagesize-left',
           total,
           onChange: onPageChange,

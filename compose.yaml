@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nextstarter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nextstarter}
+      POSTGRES_DB: ${POSTGRES_DB:-nextstarter}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    profiles: ['dev', 'prod']
+    build:
+      context: .
+      target: dev
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: yarn db:migrate
+
+  seed:
+    profiles: ['dev', 'seed']
+    build:
+      context: .
+      target: dev
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
+      SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME:-Super}
+      SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME:-Admin}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-change-this-password}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: yarn db:seed
+
+  app:
+    profiles: ['dev']
+    build:
+      context: .
+      target: dev
+    environment:
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
+      DATABASE_URL: ${DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    volumes:
+      - .:/app
+      - app-node-modules:/app/node_modules
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    command: yarn dev --hostname 0.0.0.0
+
+  app-prod:
+    profiles: ['prod']
+    build:
+      context: .
+      target: runner
+    environment:
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
+      DATABASE_URL: ${DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
+    name: ${POSTGRES_DATA_VOLUME:-nextstarter_postgres_data}
+  app-node-modules:

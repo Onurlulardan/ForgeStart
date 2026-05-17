@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { Form, Input, Button, Space } from 'antd';
-import { Resource } from '@/knex/types';
+import { Resource } from '@/db/types';
 
 interface ResourceFormProps {
   initialValues?: Resource | null;

@@ -69,10 +69,10 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-async function apiClient<T = any>(
+async function apiClient<T = unknown>(
   endpoint: string,
   method = 'GET',
-  data: any = null,
+  data: unknown = null,
   options: RequestOptions = {}
 ) {
   const { headers = {}, ...params } = options;
@@ -89,18 +89,26 @@ async function apiClient<T = any>(
 }
 
 // HTTP request methods
-export const getRequest = <T = any>(endpoint: string, options: RequestOptions = {}) => {
+export const getRequest = <T = unknown>(endpoint: string, options: RequestOptions = {}) => {
   return apiClient<T>(endpoint, 'GET', null, options);
 };
 
-export const postRequest = <T = any>(endpoint: string, data: any, options: RequestOptions = {}) => {
+export const postRequest = <T = unknown>(
+  endpoint: string,
+  data: unknown,
+  options: RequestOptions = {}
+) => {
   return apiClient<T>(endpoint, 'POST', data, options);
 };
 
-export const putRequest = <T = any>(endpoint: string, data: any, options: RequestOptions = {}) => {
+export const putRequest = <T = unknown>(
+  endpoint: string,
+  data: unknown,
+  options: RequestOptions = {}
+) => {
   return apiClient<T>(endpoint, 'PUT', data, options);
 };
 
-export const deleteRequest = <T = any>(endpoint: string, options: RequestOptions = {}) => {
+export const deleteRequest = <T = unknown>(endpoint: string, options: RequestOptions = {}) => {
   return apiClient<T>(endpoint, 'DELETE', null, options);
 };

@@ -37,6 +37,13 @@ interface ProfileFormData {
   avatar?: string;
 }
 
+interface ProfileResponse {
+  firstName: string | null;
+  lastName: string | null;
+  avatar: string | null;
+  phone: string | null;
+}
+
 interface PasswordFormData {
   currentPassword: string;
   newPassword: string;
@@ -52,7 +59,7 @@ export default function ProfileEditPage() {
   const handleProfileSubmit = async (values: ProfileFormData) => {
     setLoading(true);
     try {
-      const updatedUser = await putRequest('/administrations/profile', {
+      const updatedUser = await putRequest<ProfileResponse>('/administrations/profile', {
         ...values,
         avatar: avatarUrl,
       });
@@ -79,7 +86,7 @@ export default function ProfileEditPage() {
   const handlePasswordSubmit = async (values: PasswordFormData) => {
     setLoading(true);
     try {
-      await putRequest('/administrations/profile/password', {
+      await putRequest('/administrations/profile', {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       });

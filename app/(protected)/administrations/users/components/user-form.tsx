@@ -1,11 +1,15 @@
 'use client';
 
 import { Form, Input, Select, Button } from 'antd';
-import { User, UserStatus } from '@/knex/types';
+import { User, UserStatus } from '@/db/types';
 import { useEffect, useState } from 'react';
 import { getRequest } from '@/lib/apiClient';
 
-type UserFormData = Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'emailVerified' | 'avatar'> & {
+type UserFormData = Omit<
+  User,
+  'id' | 'name' | 'image' | 'passwordHash' | 'createdAt' | 'updatedAt' | 'emailVerified' | 'avatar'
+> & {
+  password?: string;
   roleIds?: string[];
 };
 
@@ -43,7 +47,7 @@ export function UserForm({ initialValues, onSubmit, loading }: UserFormProps) {
     form.resetFields();
     if (initialValues) {
       if (initialValues.userRoles) {
-        const roleIds = initialValues.userRoles.map((ur: any) => ur.role.id);
+        const roleIds = initialValues.userRoles.map((ur) => ur.role.id);
         form.setFieldsValue({
           ...initialValues,
           roleIds,

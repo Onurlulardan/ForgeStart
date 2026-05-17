@@ -1,145 +1,91 @@
-import { NextResponse, NextRequest } from 'next/server';
-import knex from '@/knex';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { requirePermission } from '@/lib/auth/server-permissions';
+import { NextResponse } from 'next/server';
+import { and, count, eq, ne, or } from 'drizzle-orm';
+import { db } from '@/db';
+import { permissions, resources } from '@/db/schema';
+import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
+import { requireApiPermission } from '@/lib/auth/server-permissions';
+import { resourceSchema } from '@/lib/validation/admin';
 
-// GET /api/resources/[id]
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('resource', 'view');
+    const authz = await requireApiPermission('resource', 'view');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
-
-    // Get resource by id
-    const resource = await knex('Resource')
-      .where({ id })
-      .first(
-        'id',
-        'name',
-        'description',
-        'createdAt',
-        'updatedAt'
-      );
-
-    if (resource) {
-      // Count related permissions
-      const permissionCount = await knex('Permission')
-        .where({ resourceId: id })
-        .count('id as count')
-        .first();
-
-      resource._count = {
-        permissions: parseInt(permissionCount?.count?.toString() || '0', 10)
-      };
-    }
-
-    if (!resource) {
-      return new NextResponse('Resource not found', { status: 404 });
-    }
+    const [resource] = await db.select().from(resources).where(eq(resources.id, id)).limit(1);
+    if (!resource) return jsonError('Resource not found', 404);
 
     return NextResponse.json(resource);
   } catch (error) {
-    console.error('[RESOURCE_GET]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[RESOURCES_ID_GET]', error);
   }
 }
 
-// PUT /api/resources/[id]
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('resource', 'edit');
+    const authz = await requireApiPermission('resource', 'edit');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
-    const body = await request.json();
-    const { name, description } = body;
+    const parsed = await parseJson(request, resourceSchema);
+    if (!parsed.ok) return parsed.response;
 
-    if (!name) {
-      return new NextResponse('Name is required', { status: 400 });
-    }
+    const [existingResource] = await db
+      .select()
+      .from(resources)
+      .where(eq(resources.id, id))
+      .limit(1);
+    if (!existingResource) return jsonError('Resource not found', 404);
 
-    // Check if resource exists
-    const existingResource = await knex('Resource')
-      .where({ id })
-      .first();
+    const [duplicate] = await db
+      .select({ id: resources.id })
+      .from(resources)
+      .where(
+        and(
+          ne(resources.id, id),
+          or(eq(resources.name, parsed.data.name), eq(resources.slug, parsed.data.slug))
+        )
+      )
+      .limit(1);
+    if (duplicate) return jsonError('Resource with this name or slug already exists', 409);
 
-    if (!existingResource) {
-      return new NextResponse('Resource not found', { status: 404 });
-    }
-
-    // Update resource
-    const [resource] = await knex('Resource')
-      .where({ id })
-      .update({
-        name,
-        description,
-        updatedAt: knex.fn.now()
-      })
-      .returning(['id', 'name', 'description', 'createdAt', 'updatedAt']);
+    const [resource] = await db
+      .update(resources)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(eq(resources.id, id))
+      .returning();
 
     return NextResponse.json(resource);
   } catch (error) {
-    console.error('[RESOURCE_PUT]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[RESOURCES_ID_PUT]', error);
   }
 }
 
-// DELETE /api/resources/[id]
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    await requirePermission('resource', 'delete');
+    const authz = await requireApiPermission('resource', 'delete');
+    if (!authz.ok) return authz.response;
 
     const { id } = await params;
+    const [existingResource] = await db
+      .select()
+      .from(resources)
+      .where(eq(resources.id, id))
+      .limit(1);
+    if (!existingResource) return jsonError('Resource not found', 404);
 
-    // Check if resource exists and has no associated permissions
-    const existingResource = await knex('Resource')
-      .where({ id })
-      .first();
+    const [usage] = await db
+      .select({ count: count() })
+      .from(permissions)
+      .where(eq(permissions.resourceId, id));
 
-    if (!existingResource) {
-      return new NextResponse('Resource not found', { status: 404 });
+    if (usage.count > 0) {
+      return jsonError('Cannot delete resource that has associated permissions', 400);
     }
 
-    // Count related permissions
-    const permissionCount = await knex('Permission')
-      .where({ resourceId: id })
-      .count('id as count')
-      .first();
-
-    const permissionsCount = parseInt(permissionCount?.count?.toString() || '0', 10);
-
-    if (permissionsCount > 0) {
-      return new NextResponse('Cannot delete resource that has associated permissions', {
-        status: 400,
-      });
-    }
-
-    // Delete resource
-    await knex('Resource')
-      .where({ id })
-      .delete();
-
+    await db.delete(resources).where(eq(resources.id, id));
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('[RESOURCE_DELETE]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return handleRouteError('[RESOURCES_ID_DELETE]', error);
   }
 }

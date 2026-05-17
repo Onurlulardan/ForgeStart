@@ -1,888 +1,174 @@
 # NextJS Starter
 
-![NextJS Starter Template](/public/readme-img/2.png)
+Modern full-stack starter template built with Next.js 16, React 19, Auth.js v5,
+Drizzle ORM, PostgreSQL, Ant Design 6, Docker, Yarn 4, TypeScript, Vitest and
+Playwright.
 
-[All Images](#all-images)
+The intended developer experience is simple:
 
-A modern and scalable system. Developed with Next.js 15, TypeScript, Knex.js, and Ant Design.
+```bash
+git clone <repo-url>
+cd nextjstemplate
+corepack enable
+yarn install
+cp .env.example .env
+docker compose --profile dev up --build
+```
 
-## Features
+The dev profile starts PostgreSQL, applies Drizzle migrations, seeds demo data,
+and starts the Next.js app at `http://localhost:3000`.
 
-- Modern and responsive user interface (Ant Design v5)
-- Advanced authentication and authorization system
-- Multi-organization support
-- Detailed permission and role management
-- Dark/Light theme support
-- Real-time data synchronization
-- Mobile-responsive design
+## Stack
 
-### Security Logs
+- Framework: Next.js 16 App Router
+- Runtime: React 19
+- UI: Ant Design 6
+- Auth: Auth.js v5 with credentials provider
+- Database: PostgreSQL
+- ORM and migrations: Drizzle ORM / Drizzle Kit
+- Package manager: Yarn 4 with `nodeLinker: node-modules`
+- Tests: Vitest, React Testing Library, Playwright
+- Tooling: ESLint flat config, Prettier, strict TypeScript
 
-The system keeps track of all authentication attempts, including:
+## Environment
 
-- Login attempts (successful/failed)
-- IP addresses
-- Browser information
-- Login timestamps
+Create `.env` from `.env.example` and change secrets before sharing or deploying.
 
-## Technology Stack
+Required values:
 
-- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Database**: [PostgreSQL](https://www.postgresql.org/)
-- **Query Builder**: [Knex.js](https://knexjs.org/)
-- **UI**: [Ant Design](https://ant.design/)
-- **Authentication**: [NextAuth.js](https://next-auth.js.org/)
+```env
+AUTH_URL=http://localhost:3000
+AUTH_SECRET=replace-with-a-random-secret-at-least-32-characters
+DATABASE_URL=postgres://nextstarter:nextstarter@localhost:5432/nextstarter
+SUPER_ADMIN_EMAIL=superadmin@example.com
+SUPER_ADMIN_PASSWORD=change-this-password
+```
+
+Production deployments must set a strong `AUTH_SECRET` and a non-default
+`SUPER_ADMIN_PASSWORD`.
+
+## Commands
+
+```bash
+yarn dev              # Start Next.js locally
+yarn build            # Production build
+yarn start            # Start production build
+yarn lint             # ESLint
+yarn typecheck        # TypeScript
+yarn format           # Prettier write
+yarn format:check     # Prettier check
+yarn test             # Unit/component tests
+yarn test:e2e         # Playwright smoke tests
+yarn verify           # lint + typecheck + test + build
+```
+
+Docker shortcuts:
+
+```bash
+yarn docker:up        # Start dev profile
+yarn docker:up:build  # Build and start dev profile
+yarn docker:up:prod   # Build and start production-like profile
+yarn docker:down      # Stop compose project and remove orphan containers
+yarn docker:down:volumes # Stop compose project and remove volumes
+yarn docker:build     # Build dev images
+yarn docker:build:prod # Build production image
+yarn docker:migrate   # Run migration container once
+yarn docker:seed      # Run seed container once
+yarn docker:logs      # Follow dev profile logs
+yarn docker:ps        # Show dev profile containers
+```
+
+## Database
+
+Drizzle is the only database layer. Knex was removed in v2.
+
+```bash
+yarn db:generate      # Generate a migration from db/schema.ts
+yarn db:migrate       # Apply migrations from ./drizzle
+yarn db:seed          # Seed roles, resources, actions, super admin
+yarn db:reset         # Drop public schema, migrate, seed
+yarn db:studio        # Open Drizzle Studio
+```
+
+The source of truth is `db/schema.ts`. Generated SQL migrations live in
+`drizzle/` and are committed.
+
+## Docker
+
+Development:
+
+```bash
+yarn docker:up:build
+```
+
+Production-like local run:
+
+```bash
+yarn docker:up:prod
+```
+
+Optional seed-only run:
+
+```bash
+yarn docker:seed
+```
+
+Services:
+
+- `postgres`: PostgreSQL 17 with healthcheck
+- `migrate`: applies Drizzle migrations
+- `seed`: seeds dev/demo data
+- `app`: hot-reload dev server
+- `app-prod`: production image using `next start`
 
 ## Project Structure
 
-```
-nextstarter/
-├── app/                         # Next.js App Router structure
-│   ├── (protected)/             # Protected routes
-│   │   ├── dashboard/           # Dashboard and statistics
-│   │   │   ├── page.tsx         # Main dashboard page
-│   │   │   └── components/      # Dashboard components
-│   │   └── administrations/     # Administration panel
-│   │       ├── users/           # User management
-│   │       │   ├── page.tsx     # User list
-│   │       │   └── profile/     # Profile management
-│   │       ├── organizations/   # Organization management
-│   │       ├── roles/           # Role management
-│   │       └── permissions/     # Permission management
-│   ├── api/                     # API endpoints
-│   │   ├── auth/                # Authentication APIs
-│   │   ├── dashboard/           # Dashboard APIs
-│   │   │   ├── stats/           # Statistics APIs
-│   │   │   └── activity/        # Activity APIs
-│   │   └── administrations/     # Administration APIs
-│   │       ├── users/           # User APIs
-│   │       ├── organizations/   # Organization APIs
-│   │       ├── roles/           # Role APIs
-│   │       ├── permissions/     # Permission APIs
-│   │       ├── resources/       # Resource APIs
-│   │       └── actions/         # Action APIs
-│   └── auth/                    # Authentication pages
-├── contexts/                    # React Contexts
-│   └── NotificationContext.tsx  # Notification management
-├── lib/                         # Helper functions and services
-│   ├── apiClient/               # API client
-│   │   └── index.ts             # Central API operations
-│   ├── auth/                    # Authentication and authorization
-│   │   ├── auth-options.ts      # NextAuth configuration
-│   │   ├── permissions.ts       # Permission control hooks
-│   │   └── session.ts           # Session management
-│   └── utils/                   # Utility functions
-├── hooks/                       # Custom React hooks
-│   └── useNotificationSetup.ts  # Notification hook
-└── knex/                        # Database configuration
-    ├── knexfile.ts              # Knex configuration
-    ├── index.ts                 # Knex database client
-    ├── setdb.ts                 # Database schema creation
-    ├── seed.ts                  # Database seeding
-    ├── adapters/                # Database adapters
-    │   └── nextauth-knex-adapter.ts  # NextAuth Knex adapter
-    ├── types/                   # TypeScript type definitions
-    │   ├── user.ts              # User types
-    │   ├── organization.ts      # Organization types
-    │   ├── role.ts              # Role types
-    │   └── permission.ts        # Permission types
-    └── migrations/              # Database migrations
+```text
+app/                  Next.js routes, pages and API handlers
+auth.ts               Auth.js v5 configuration
+db/                   Drizzle schema, connection, migrations runner, seed
+drizzle/              Generated SQL migrations
+lib/api/              Route helpers and admin query mappers
+lib/auth/             Permission checks and session payload helpers
+lib/validation/       Zod request validation
+core/                 Shared UI components and layout
+tests/e2e/            Playwright smoke tests
 ```
 
-## Detailed Permission System Explanation
+## Authentication and Authorization
 
-### 1. Basic Concepts
+Auth.js v5 runs with JWT sessions. The credentials provider reads users from
+PostgreSQL through Drizzle and enriches the session with direct, role-based and
+organization-based permissions.
 
-#### Resource
+API routes use `requireApiPermission`, which returns JSON `401` or `403`
+responses instead of redirecting. Client components use `usePermission` against
+the same permission model.
 
-Represents protected entities in the system.
+## v1 to v2 Notes
 
-```typescript
-// Example resource definitions
-const resources = [
-  { name: 'Product', slug: 'product' },
-  { name: 'Customer', slug: 'customer' },
-  { name: 'Order', slug: 'order' },
-];
-```
+This is a breaking release.
 
-#### Action
+- Knex, `knexfile.cjs`, destructive `setdb.ts`, and the custom Knex Auth adapter
+  were removed.
+- The database schema now uses snake_case PostgreSQL table and column names.
+- Existing v1 databases are not automatically migrated. Start v2 with a fresh
+  database, or write a one-off data migration for your production data.
+- npm lockfiles are not supported. Use Yarn 4 only.
+- `middleware.ts` moved to the Next.js 16 `proxy.ts` convention.
+- Ant Design v6 no longer needs the React 19 v5 patch package.
 
-Defines operations that can be performed on resources.
+## Quality Gate
 
-```typescript
-// Example action definitions
-const actions = [
-  { name: 'View', slug: 'view' },
-  { name: 'Create', slug: 'create' },
-  { name: 'Edit', slug: 'edit' },
-  { name: 'Delete', slug: 'delete' },
-];
-```
-
-### 2. Permission Management Examples
-
-#### a) User-Based Permission
-
-Assigning permission directly to a user:
-
-```typescript
-// Example: Give John permission to view and edit products
-const permission = {
-  target: 'USER',
-  userId: 'john_123',
-  resourceId: 'product',
-  actions: ['view', 'edit'],
-};
-```
-
-#### b) Role-Based Permission
-
-Assigning permission to a role:
-
-```typescript
-// Example: Give Sales Manager role customer and order management permissions
-const permission = {
-  target: 'ROLE',
-  roleId: 'sales_manager',
-  resourceId: 'customer',
-  actions: ['view', 'create', 'edit', 'delete'],
-};
-```
-
-#### c) Organization-Based Permission
-
-Assigning permission to an entire organization:
-
-```typescript
-// Example: Give Branch X permission to view orders
-const permission = {
-  target: 'ORGANIZATION',
-  organizationId: 'branch_x',
-  resourceId: 'order',
-  actions: ['view'],
-};
-```
-
-### 3. Permission Check Examples
-
-#### Permission Check in Frontend
-
-```typescript
-// Permission check within component
-const CanEditProduct = () => {
-  const hasPermission = usePermission("product", "edit");
-
-  if (!hasPermission) {
-    return <div>You don't have permission for this operation</div>;
-  }
-
-  return <EditProductForm />;
-};
-```
-
-#### Permission Check in Backend
-
-```typescript
-// Permission check in API route
-export async function PUT(request: NextRequest) {
-  try {
-    await requirePermission('product', 'edit');
-    // Continue if permission exists
-  } catch (error) {
-    return new NextResponse('Unauthorized', { status: 401 });
-  }
-}
-```
-
-### 4. API Endpoints
-
-#### Permission Management
-
-- `GET /api/administrations/permissions`: List all permissions
-- `POST /api/administrations/permissions`: Create new permission
-- `PUT /api/administrations/permissions/[id]`: Update permission
-- `DELETE /api/administrations/permissions/[id]`: Delete permission
-
-#### Resource Management
-
-- `GET /api/administrations/resources`: List all resources
-- `POST /api/administrations/resources`: Create new resource
-- `PUT /api/administrations/resources/[id]`: Update resource
-- `DELETE /api/administrations/resources/[id]`: Delete resource
-
-#### Action Management
-
-- `GET /api/administrations/actions`: List all actions
-- `POST /api/administrations/actions`: Create new action
-- `PUT /api/administrations/actions/[id]`: Update action
-- `DELETE /api/administrations/actions/[id]`: Delete action
-
-### 5. Example Usage Scenarios
-
-#### Scenario 1: Sales Team Permissions
-
-```typescript
-// 1. Create Sales Role
-const salesRole = await knex('roles')
-  .insert({
-    name: 'Sales Team',
-    description: 'Sales team members',
-  })
-  .returning('*')
-  .first();
-
-// 2. Assign Permissions to Sales Role
-const permissions = [
-  {
-    target: 'ROLE',
-    roleId: salesRole.id,
-    resourceId: 'customer',
-    actions: ['view', 'create', 'edit'],
-  },
-  {
-    target: 'ROLE',
-    roleId: salesRole.id,
-    resourceId: 'order',
-    actions: ['view', 'create'],
-  },
-];
-
-// 3. Apply Permissions
-await Promise.all(permissions.map((perm) => knex('permissions').insert(perm)));
-```
-
-#### Scenario 2: Regional Manager Permissions
-
-```typescript
-// 1. Create Regional Manager Role
-const managerRole = await knex('roles')
-  .insert({
-    name: 'Regional Manager',
-    description: 'Regional management team',
-  })
-  .returning('*')
-  .first();
-
-// 2. Create Region Organization
-const regionOrg = await knex('organizations')
-  .insert({
-    name: 'East Region',
-    code: 'EAST_001',
-  })
-  .returning('*')
-  .first();
-
-// 3. Assign Organization-wide Permissions
-const permissions = [
-  {
-    target: 'ORGANIZATION',
-    organizationId: regionOrg.id,
-    resourceId: 'sales_report',
-    actions: ['view'],
-  },
-  {
-    target: 'ORGANIZATION',
-    organizationId: regionOrg.id,
-    resourceId: 'performance_metrics',
-    actions: ['view', 'edit'],
-  },
-];
-
-await Promise.all(permissions.map((perm) => knex('permissions').insert(perm)));
-```
-
-## Notification System
-
-The notification system uses Ant Design's notification component with a custom context setup:
-
-```typescript
-// types.ts
-export type NotificationType = 'success' | 'error' | 'info' | 'warning';
-
-export interface ShowNotificationFunction {
-  (type: NotificationType, message: string, description?: string): void;
-}
-
-// NotificationContext.tsx
-const NotificationContext = createContext<NotificationContextType | null>(null);
-
-export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
-  const [notificationApi, contextHolder] = notification.useNotification();
-
-  const showNotification: ShowNotificationFunction = (type, message, description) => {
-    notificationApi[type]({
-      message,
-      description,
-      placement: 'topRight'
-    });
-  };
-
-  return (
-    <NotificationContext.Provider value={{ showNotification, notificationApi }}>
-      {contextHolder}
-      {children}
-    </NotificationContext.Provider>
-  );
-};
-
-export const useNotification = () => {
-  const context = useContext(NotificationContext);
-  if (!context) {
-    throw new Error('useNotification must be used within a NotificationProvider');
-  }
-  return context;
-};
-```
-
-Usage in API Client:
-
-```typescript
-// Success case (POST/PUT/DELETE)
-if (['POST', 'PUT', 'DELETE'].includes(response.config.method?.toUpperCase() || '')) {
-  const message =
-    response.config.method?.toUpperCase() === 'DELETE'
-      ? 'Deletion successful!'
-      : 'Process completed successfully';
-
-  const showNotification = window.__showNotification as ShowNotificationFunction;
-  showNotification?.('success', message);
-}
-
-// Error case
-const errorMessage = (error.response?.data as string) || error.message;
-const showNotification = window.__showNotification as ShowNotificationFunction;
-const truncatedMessage =
-  errorMessage.length > 500 ? errorMessage.slice(0, 497) + '...' : errorMessage;
-showNotification?.('error', 'Hata', truncatedMessage);
-```
-
-### Best Practices
-
-1. **Consistent Usage**
-
-   - Use the same notification system across the entire application
-   - Maintain consistent message formats and durations
-
-2. **Error Handling**
-
-   - Always provide clear error messages
-   - Include relevant error details in the description
-   - Add action buttons for error recovery when applicable
-
-3. **User Experience**
-
-   - Keep notifications concise and informative
-   - Use appropriate notification types
-   - Don't overwhelm users with too many notifications
-   - Consider notification stacking and positioning
-
-4. **Integration with API Calls**
-
-```typescript
-const apiCall = async () => {
-  try {
-    const response = await fetch('/api/data');
-    const data = await response.json();
-
-    showNotification({
-      type: 'success',
-      message: 'Data Retrieved',
-      description: 'Successfully fetched the requested data.',
-    });
-
-    return data;
-  } catch (error) {
-    showNotification({
-      type: 'error',
-      message: 'API Error',
-      description: error.message,
-    });
-
-    throw error;
-  }
-};
-```
-
-### Notification Types
-
-1. **Success Notifications**
-
-```typescript
-showNotification('success', 'Order Created', 'Order #12345 has been successfully created');
-```
-
-2. **Error Notifications**
-
-```typescript
-showNotification('error', 'API Error', 'Failed to process your request');
-```
-
-3. **Warning Notifications**
-
-```typescript
-showNotification('warning', 'Low Stock Alert', 'Product stock is below the minimum threshold');
-```
-
-4. **Info Notifications**
-
-```typescript
-showNotification('info', 'System Update', 'A system update is scheduled for tonight at 00:00');
-```
-
-### API Error Handling
-
-```typescript
-// API error interceptor
-axiosInstance.interceptors.response.use(
-  (response: AxiosResponse) => {
-    // Success notification for POST, PUT, DELETE requests
-    if (
-      typeof window !== 'undefined' &&
-      ['POST', 'PUT', 'DELETE'].includes(response.config.method?.toUpperCase() || '')
-    ) {
-      const message =
-        response.config.method?.toUpperCase() === 'DELETE'
-          ? 'Deletion successful!'
-          : 'Process completed successfully';
-
-      const showNotification = window.__showNotification as ShowNotificationFunction;
-      showNotification?.('success', message);
-    }
-    return response.data;
-  },
-  async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        await signOut({ callbackUrl: '/auth/login' });
-      }
-    }
-
-    const errorMessage = (error.response?.data as string) || error.message;
-
-    if (typeof window !== 'undefined') {
-      const showNotification = window.__showNotification as ShowNotificationFunction;
-      const truncatedMessage =
-        errorMessage.length > 500 ? errorMessage.slice(0, 497) + '...' : errorMessage;
-      showNotification?.('error', 'Hata', truncatedMessage);
-    }
-
-    throw new Error(errorMessage);
-  }
-);
-```
-
-### Form Validation Notifications
-
-```typescript
-const handleFormSubmit = async (values: FormValues) => {
-  try {
-    await validateForm(values);
-    await submitForm(values);
-
-    showNotification('success', 'Form Submitted', 'Your form has been successfully submitted');
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      showNotification('warning', 'Validation Error', error.message);
-    } else {
-      showNotification('error', 'Submission Error', 'Failed to submit form. Please try again');
-    }
-  }
-};
-```
-
-### 3. Permission System Working Logic
-
-The `lib/auth/permissions.ts` file forms the core of the permission system:
-
-#### a) Permission Check Functions
-
-```typescript
-// 1. Basic permission check
-async function checkPermission(
-  resourceSlug: string,
-  actionSlug: string,
-  organizationId?: string
-): Promise<boolean>;
-
-// 2. Permission requirement
-async function requirePermission(
-  resourceSlug: string,
-  actionSlug: string,
-  organizationId?: string
-): Promise<void>;
-
-// 3. React hook
-function usePermission(resourceSlug: string, actionSlug: string, organizationId?: string): boolean;
-
-// 4. Higher-order component
-function withPermission(
-  Component: React.ComponentType<P>,
-  resourceSlug: string,
-  actionSlug: string
-): React.FC<P>;
-```
-
-#### b) Permission Check Hierarchy
-
-1. **System Admin Check**
-
-   ```typescript
-   if (session.user.role === 'ADMIN') return true;
-   ```
-
-2. **Direct Permission Check**
-
-   ```typescript
-   const hasDirectPermission = checkResourcePermission(
-     session.user.permissions,
-     resourceSlug,
-     actionSlug
-   );
-   ```
-
-3. **Role-Based Permission Check**
-
-   ```typescript
-   const rolePermissions = membership.role?.permissions || [];
-   const hasRolePermission = checkResourcePermission(rolePermissions, resourceSlug, actionSlug);
-   ```
-
-4. **Organization Permission Check**
-   ```typescript
-   const organizationPermissions = membership.organization.permissions;
-   return checkResourcePermission(organizationPermissions, resourceSlug, actionSlug);
-   ```
-
-### 4. Next.js 15 Route Handler Rules
-
-#### a) Params Promise Structure
-
-```typescript
-// ✅ CORRECT USAGE
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  // ... operations
-}
-
-// ❌ INCORRECT USAGE
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params; // missing await!
-  // ... operations
-}
-```
-
-#### b) Route Handler Examples
-
-```typescript
-// 1. Single parameter
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  // ... operations
-}
-
-// 2. Multiple parameters
-export async function GET(
-  request: NextRequest,
-  {
-    params,
-  }: {
-    params: Promise<{
-      organizationId: string;
-      userId: string;
-    }>;
-  }
-) {
-  const { organizationId, userId } = await params;
-  // ... operations
-}
-
-// 3. Query parameters
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const query = searchParams.get('q');
-  // ... operations
-}
-```
-
-#### c) Important Notes
-
-- `params` in route handlers is a Promise
-- Use `Promise<{ id: string }>` in TypeScript definition
-- Always resolve `params` with `await`
-- This rule applies to all dynamic routes
-- Pay attention to this rule to prevent build errors
-
-## API Client Usage
-
-The API client provides a type-safe way to make HTTP requests with built-in error handling and automatic notifications.
-
-#### Basic Usage
-
-```typescript
-import { getRequest, postRequest, putRequest, deleteRequest } from '@/lib/apiClient';
-
-// GET request
-const users = await getRequest<User[]>('/users');
-
-// POST request
-const newUser = await postRequest<User>('/users', {
-  name: 'John',
-  email: 'john@example.com',
-});
-
-// PUT request
-const updated = await putRequest<User>(`/users/${id}`, {
-  name: 'Updated Name',
-});
-
-// DELETE request
-const deleted = await deleteRequest<boolean>(`/users/${id}`);
-```
-
-#### Features
-
-1. **Automatic API Prefix**
-
-   - All requests are automatically prefixed with `/api`
-   - Example: `/users` becomes `/api/users`
-
-2. **Automatic Notifications**
-
-   ```typescript
-   // Success notifications (for POST, PUT, DELETE)
-   if (['POST', 'PUT', 'DELETE'].includes(response.config.method?.toUpperCase() || '')) {
-     const message =
-       response.config.method?.toUpperCase() === 'DELETE'
-         ? 'Deletion successful!'
-         : 'Process completed successfully';
-     showNotification?.('success', message);
-   }
-
-   // Error notifications
-   showNotification({
-     type: 'error',
-     message: 'API Error',
-     description: errorMessage,
-   });
-   ```
-
-   - Success cases:
-     - Shows for POST/PUT/DELETE operations
-     - DELETE: "Deletion successful!"
-     - POST/PUT: "Process completed successfully"
-   - Error cases:
-     - Shows "API Error" as title
-     - Shows error message in description
-
-3. **Retry Configuration**
-
-   - 3 retry attempts for failed requests
-   - Uses exponential backoff
-   - Only retries on:
-     - Network errors
-     - 500+ server errors
-   - Does not retry if response contains error data
-
-4. **Type Safety**
-
-   ```typescript
-   interface User {
-     id: number;
-     name: string;
-     email: string;
-   }
-
-   // TypeScript will ensure type safety
-   const user = await getRequest<User>('/users/1');
-   console.log(user.name); // TypeScript knows this exists
-   ```
-
-#### Error Handling Example
-
-```typescript
-try {
-  const users = await getRequest<User[]>('/users');
-  // Success case - for POST/PUT/DELETE, automatically shows success notification
-} catch (error) {
-  // Error notification is automatically shown:
-  // - Shows "Hata" with truncated error message
-  // - For 401, redirects to login page
-  console.error('API Error:', error);
-}
-```
-
-#### Request Options
-
-```typescript
-interface RequestOptions {
-  headers?: Record<string, string>;
-  [key: string]: any; // Additional axios request config
-}
-
-// With custom headers
-const response = await getRequest<User[]>('/users', {
-  headers: {
-    Authorization: 'Bearer token',
-    'Custom-Header': 'value',
-  },
-});
-
-// With query parameters
-const filtered = await getRequest<User[]>('/users', {
-  role: 'admin',
-  active: true,
-});
-```
-
-## Installation and Development
-
-1. Clone the repository
+Before opening a PR:
 
 ```bash
-git clone https://github.com/yourusername/nextstarter.git
+yarn verify
+docker compose --profile dev up --build
 ```
 
-2. Install dependencies
+For database changes, also run:
 
 ```bash
-npm install
+yarn db:reset
 ```
-
-3. Prepare the database
-
-```bash
-npm run reset-db    # Create database schema
-npm run seed        # Load initial data
-```
-
-4. Start the development server
-
-```bash
-npm run dev
-```
-
-## Contributing
-
-1. Fork the project
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Create a Pull Request
-
-## Environment Variables and Configuration
-
-Create a `.env` file in the project root directory and define the following variables:
-
-```env
-# Database Connection
-DB_HOST="localhost"
-DB_PORT="5432"
-DB_USER="postgres"
-DB_PASSWORD="password"
-DB_NAME="nextstarter"
-
-# NextAuth.js Configuration
-NEXTAUTH_SECRET="your-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SESSION_MAX_AGE=604800   # 7 days (7 * 24 * 60 * 60)
-NEXTAUTH_SESSION_UPDATE_AGE=3600  # 1 hour (60 * 60)
-
-# Super Admin Account Details
-SUPER_ADMIN_MAIL="superadmin@superadmin.com"
-SUPER_ADMIN_FIRSTNAME="Super"
-SUPER_ADMIN_LASTNAME="Admin"
-SUPER_ADMIN_PASSWORD="your-secure-password"
-```
-
-### Important Notes
-
-1. **Database Connection**: The database configuration uses separate environment variables for host, port, user, password, and database name for Knex.js connection.
-
-2. **NextAuth.js Configuration**:
-
-   - `NEXTAUTH_SECRET`: Secret key used for session security
-   - `NEXTAUTH_URL`: URL where the application runs (usually `http://localhost:3000` in development)
-   - `NEXTAUTH_SESSION_MAX_AGE`: Maximum session duration for session security (in seconds)
-   - `NEXTAUTH_SESSION_UPDATE_AGE`: Session update duration for session security (in seconds)
-
-3. **Super Admin Account**:
-   - System automatically creates a super admin account during initial setup
-   - Account details are taken from the `.env` file
-   - This account has all system permissions
-
-## Developer Guide
-
-### 1. Commands and Scripts
-
-```bash
-# Development
-npm run dev         # Start development server
-npm run build       # Build project for production
-npm run start       # Start production server
-
-# Database
-npm run migrate     # Create and apply Knex migration
-npm run reset-db    # Reset database
-npm run seed        # Load seed data
-
-# Code Quality
-npm run lint        # Code check with ESLint
-npm run format      # Format code with Prettier
-```
-
-### 2. Database Seed Process
-
-The `knex/seed.ts` file creates initial data:
-
-1. **Default Resources**
-
-   ```typescript
-   // Example resources
-   const defaultResources = [
-     { name: 'ALL', slug: '*' },
-     { name: 'ORGANIZATION', slug: 'organization' },
-     { name: 'USER', slug: 'user' },
-     // ...
-   ];
-   ```
-
-2. **Default Actions**
-
-   ```typescript
-   const defaultActions = [
-     { name: 'VIEW', slug: 'view' },
-     { name: 'CREATE', slug: 'create' },
-     { name: 'EDIT', slug: 'edit' },
-     { name: 'DELETE', slug: 'delete' },
-     { name: 'MANAGE', slug: 'manage' },
-   ];
-   ```
-
-3. **Super Admin and Roles**
-   - Creates super admin user
-   - Defines default roles
-   - Assigns basic permissions
-
-## All Images
-
-![Image 1](/public/readme-img/1.png)
-
-![Image 2](/public/readme-img/2.png)
-
-![Image 3](/public/readme-img/3.png)
-
-![Image 4](/public/readme-img/4.png)
-
-![Image 5](/public/readme-img/5.png)
-
-![Image 6](/public/readme-img/6.png)
-
-![Image 7](/public/readme-img/7.png)
-
-![Image 8](/public/readme-img/8.png)
-
-![Image 9](/public/readme-img/9.png)
-
-![Image 10](/public/readme-img/10.png)

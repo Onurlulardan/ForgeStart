@@ -39,7 +39,7 @@ export default function AdministrationsPage() {
     redirect('/auth/login');
   }
 
-  const isAdmin = session.user.userRoles?.some(ur => ur.role.name === 'ADMIN');
+  const isAdmin = session.user.userRoles?.some((ur) => ur.role.name === 'ADMIN');
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -70,7 +70,7 @@ export default function AdministrationsPage() {
                   {session.user.email}
                 </Text>
                 <Text type="secondary" className="block">
-                  Roles: {session.user.userRoles?.map(ur => ur.role.name).join(', ') || 'No Role'}
+                  Roles: {session.user.userRoles?.map((ur) => ur.role.name).join(', ') || 'No Role'}
                 </Text>
                 <div className="flex flex-col space-y-2 mt-4">
                   <Text strong className="block">

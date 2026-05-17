@@ -46,7 +46,5 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
 }
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <ProtectedContent>{children}</ProtectedContent>
-  );
+  return <ProtectedContent>{children}</ProtectedContent>;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Drawer, Form, Select, Button } from 'antd';
-import { Organization, User } from '@/knex/types';
+import { Organization, User } from '@/db/types';
 import { getRequest, postRequest } from '@/lib/apiClient';
 
 interface AddUsersDrawerProps {
@@ -24,7 +24,7 @@ export function AddUsersDrawer({ organization, open, onClose }: AddUsersDrawerPr
 
   const fetchAvailableUsers = async () => {
     try {
-      const data = await getRequest('/administrations/users/available');
+      const data = await getRequest<User[]>('/administrations/users/available');
       setUsers(data);
     } catch (error) {
       console.error('Failed to fetch users:', error);

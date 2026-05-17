@@ -1,7 +1,7 @@
 'use client';
 
 import { Form, Input, Select, Button } from 'antd';
-import { Organization, OrgStatus } from '@/knex/types';
+import { Organization, OrgStatus } from '@/db/types';
 import { useEffect, useState } from 'react';
 import { getRequest } from '@/lib/apiClient';
 
@@ -25,7 +25,7 @@ export function OrganizationForm({ initialValues, onSubmit, loading }: Organizat
         ? `/administrations/organizations/available-parents?organizationId=${initialValues.id}`
         : '/administrations/organizations/available-parents';
 
-      const data = await getRequest(url);
+      const data = await getRequest<Organization[]>(url);
       setOrganizations(data);
     } catch (error) {
       console.error('Failed to fetch available parents:', error);

@@ -1,6 +1,6 @@
 export interface RequestOptions {
   headers?: Record<string, string>;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export type NotificationType = 'success' | 'error' | 'info' | 'warning';

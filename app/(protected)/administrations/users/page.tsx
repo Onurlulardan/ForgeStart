@@ -3,11 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Card, Button, Tag, Typography, Dropdown, MenuProps, Drawer, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
 import { usePermission } from '@/lib/auth/client-permissions';
 import { DataGrid } from '@/core/components/datagrid';
 import { UserForm } from './components/user-form';
-import { User, UserStatus } from '@/knex/types';
+import { User, UserStatus } from '@/db/types';
 import { getRequest, postRequest, putRequest, deleteRequest } from '@/lib/apiClient';
 
 const { Title } = Typography;
@@ -37,8 +36,6 @@ export default function UsersPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithoutPassword | null>(null);
-  const router = useRouter();
-
   // Permission hooks
   const canCreate = usePermission('user', 'create');
   const canEdit = usePermission('user', 'edit');

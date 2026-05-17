@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Form, Select, Button, Space } from 'antd';
-import { Permission, Resource, Action, PermissionTarget } from '@/knex/types';
+import { Permission, Resource, Action, PermissionTarget } from '@/db/types';
 import { getRequest } from '@/lib/apiClient';
 
 interface User {

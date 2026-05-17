@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { Form, Input, Button, Space } from 'antd';
-import { Action } from '@/knex/types';
+import { Action } from '@/db/types';
 
 interface ActionFormProps {
   initialValues?: Action | null;
