@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import LoginForm from './login-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -7,12 +8,17 @@ export default function LoginPage() {
       <div className="grid w-full max-w-5xl overflow-hidden rounded-lg border bg-card shadow-sm md:grid-cols-[1fr_440px]">
         <section className="hidden border-r bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between">
           <div>
-            <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              NS
-            </div>
-            <h1 className="mt-8 text-3xl font-semibold tracking-tight">Next Starter V2</h1>
+            <Image
+              src="/brand/forgestart-mark.svg"
+              alt=""
+              width={40}
+              height={40}
+              className="size-10"
+              priority
+            />
+            <h1 className="mt-8 text-3xl font-semibold tracking-tight">ForgeStart</h1>
             <p className="mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
-              A professional starter console with Auth.js, Drizzle, PostgreSQL and Docker-first
+              A professional ForgeStart console with Auth.js, Drizzle, PostgreSQL and Docker-first
               local development.
             </p>
           </div>
@@ -32,7 +38,7 @@ export default function LoginPage() {
           <Card className="w-full max-w-sm border-0 bg-transparent shadow-none ring-0">
             <CardHeader className="px-1">
               <CardTitle className="text-2xl">Welcome back</CardTitle>
-              <CardDescription>Sign in to manage your starter workspace.</CardDescription>
+              <CardDescription>Sign in to manage your ForgeStart workspace.</CardDescription>
             </CardHeader>
             <CardContent className="px-1">
               <LoginForm />

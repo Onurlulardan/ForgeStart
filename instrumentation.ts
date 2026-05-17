@@ -2,7 +2,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
 
   const serviceName =
-    process.env.OTEL_SERVICE_NAME ?? process.env.npm_package_name ?? 'nextstarter';
+    process.env.OTEL_SERVICE_NAME ?? process.env.npm_package_name ?? 'forgestart';
   const environment = process.env.NODE_ENV ?? 'development';
 
   console.info(

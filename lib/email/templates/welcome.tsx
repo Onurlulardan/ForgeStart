@@ -10,7 +10,7 @@ export interface WelcomeEmailProps {
 export function WelcomeEmail({
   recipientName,
   appUrl,
-  appName = 'Next Starter',
+  appName = 'ForgeStart',
 }: WelcomeEmailProps) {
   return (
     <EmailLayout

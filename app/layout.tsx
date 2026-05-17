@@ -6,8 +6,11 @@ import { loadSystemTheme } from './actions/theme';
 import type { ThemeTokens } from '@/lib/theme';
 
 export const metadata: Metadata = {
-  title: 'NextJS Starter',
-  description: 'Modern Next.js, Auth.js, Drizzle, PostgreSQL starter template',
+  title: 'ForgeStart',
+  description: 'Production-ready Next.js, Auth.js, Drizzle and PostgreSQL starter template',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 function isThemeTokens(value: unknown): value is ThemeTokens {

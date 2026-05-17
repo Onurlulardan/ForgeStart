@@ -1,6 +1,10 @@
-# NextJS Starter
+<p align="center">
+  <img src="public/brand/forgestart-logo.svg" alt="ForgeStart" width="360" />
+</p>
 
-Modern full-stack starter template built with Next.js 16, React 19, Auth.js v5,
+# ForgeStart
+
+Production-ready full-stack starter template built with Next.js 16, React 19, Auth.js v5,
 Drizzle ORM, PostgreSQL, shadcn/ui, Tailwind CSS 4, Docker, Yarn 4, TypeScript,
 Vitest and Playwright.
 
@@ -8,7 +12,7 @@ The intended developer experience is simple:
 
 ```bash
 git clone <repo-url>
-cd nextjstemplate
+cd ForgeStart
 corepack enable
 yarn install
 cp .env.example .env
@@ -52,8 +56,8 @@ Required values:
 ```env
 AUTH_URL=http://localhost:3000
 AUTH_SECRET=replace-with-a-random-secret-at-least-32-characters
-DATABASE_URL=postgres://nextstarter:nextstarter@localhost:5432/nextstarter
-DOCKER_DATABASE_URL=postgres://nextstarter:nextstarter@postgres:5432/nextstarter
+DATABASE_URL=postgres://forgestart:forgestart@localhost:5432/forgestart
+DOCKER_DATABASE_URL=postgres://forgestart:forgestart@postgres:5432/forgestart
 SUPER_ADMIN_EMAIL=superadmin@example.com
 SUPER_ADMIN_PASSWORD=change-this-password
 ```

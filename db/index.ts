@@ -7,7 +7,7 @@ import * as schema from './schema';
 const connectionString =
   process.env.DATABASE_URL ??
   (process.env.NEXT_PHASE === 'phase-production-build'
-    ? 'postgres://nextstarter:nextstarter@localhost:5432/nextstarter'
+    ? 'postgres://forgestart:forgestart@localhost:5432/forgestart'
     : undefined);
 
 if (!connectionString) {
@@ -15,18 +15,18 @@ if (!connectionString) {
 }
 
 declare global {
-  var __nextstarterPool: Pool | undefined;
+  var __forgestartPool: Pool | undefined;
 }
 
 const pool =
-  globalThis.__nextstarterPool ??
+  globalThis.__forgestartPool ??
   new Pool({
     connectionString,
     max: Number(process.env.DATABASE_POOL_MAX ?? 10),
   });
 
 if (process.env.NODE_ENV !== 'production') {
-  globalThis.__nextstarterPool = pool;
+  globalThis.__forgestartPool = pool;
 }
 
 export const db = drizzle(pool, { schema });

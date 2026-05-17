@@ -1,0 +1,12 @@
+<svg width="960" height="240" viewBox="0 0 960 240" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">ForgeStart logo</title>
+  <desc id="desc">ForgeStart wordmark with a geometric forged F mark.</desc>
+  <rect x="24" y="24" width="192" height="192" rx="44" fill="#0f172a"/>
+  <path d="M78 74C78 68.48 82.48 64 88 64H166C171.52 64 176 68.48 176 74V92C176 97.52 171.52 102 166 102H116V120H154C159.52 120 164 124.48 164 130V146C164 151.52 159.52 156 154 156H116V186C116 191.52 111.52 196 106 196H88C82.48 196 78 191.52 78 186V74Z" fill="#f8fafc"/>
+  <path d="M116 102H166C171.52 102 176 97.52 176 92V74C176 68.48 171.52 64 166 64H140L116 102Z" fill="#38bdf8"/>
+  <path d="M116 120H154C159.52 120 164 124.48 164 130V146C164 151.52 159.52 156 154 156H134L116 120Z" fill="#14b8a6"/>
+  <path d="M171 50L180.8 72.2L203 82L180.8 91.8L171 114L161.2 91.8L139 82L161.2 72.2L171 50Z" fill="#f59e0b"/>
+  <path d="M188 118L193.4 130.6L206 136L193.4 141.4L188 154L182.6 141.4L170 136L182.6 130.6L188 118Z" fill="#f59e0b"/>
+  <text x="252" y="122" fill="#0f172a" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="74" font-weight="760" letter-spacing="0">ForgeStart</text>
+  <text x="256" y="165" fill="#475569" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="24" font-weight="500" letter-spacing="0">Production-ready Next.js foundation</text>
+</svg>

@@ -1,7 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboardIcon, ShieldCheckIcon, SparklesIcon } from 'lucide-react';
+import { LayoutDashboardIcon, ShieldCheckIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
@@ -35,12 +36,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       )}
     >
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <SparklesIcon className="size-4" />
-        </div>
+        <Image src="/brand/forgestart-mark.svg" alt="" width={36} height={36} className="size-9" />
         {!collapsed && (
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">Next Starter</p>
+            <p className="truncate text-sm font-semibold">ForgeStart</p>
             <p className="truncate text-xs text-sidebar-foreground/60">v2 operations console</p>
           </div>
         )}

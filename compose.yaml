@@ -1,10 +1,12 @@
+name: forgestart
+
 services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-nextstarter}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nextstarter}
-      POSTGRES_DB: ${POSTGRES_DB:-nextstarter}
+      POSTGRES_USER: ${POSTGRES_USER:-forgestart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgestart}
+      POSTGRES_DB: ${POSTGRES_DB:-forgestart}
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     volumes:
@@ -21,7 +23,7 @@ services:
       context: .
       target: dev
     environment:
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
     depends_on:
       postgres:
         condition: service_healthy
@@ -33,7 +35,7 @@ services:
       context: .
       target: dev
     environment:
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
       SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME:-Super}
       SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME:-Admin}
@@ -51,7 +53,7 @@ services:
     environment:
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
       REALTIME_URL: ${DOCKER_REALTIME_URL:-http://realtime:4000}
@@ -94,7 +96,7 @@ services:
       AUTH_URL: ${DOCKER_APP_URL:-http://app:3000}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       REALTIME_PORT: ${REALTIME_PORT:-4000}
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
     ports:
       - '${REALTIME_PORT:-4000}:4000'
     volumes:
@@ -135,7 +137,7 @@ services:
     environment:
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://nextstarter:nextstarter@postgres:5432/nextstarter}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
       REALTIME_URL: ${DOCKER_REALTIME_URL:-http://realtime:4000}
@@ -152,6 +154,6 @@ services:
 
 volumes:
   postgres-data:
-    name: ${POSTGRES_DATA_VOLUME:-nextstarter_postgres_data}
+    name: ${POSTGRES_DATA_VOLUME:-forgestart_postgres_data}
   minio-data:
-    name: ${MINIO_DATA_VOLUME:-nextstarter_minio_data}
+    name: ${MINIO_DATA_VOLUME:-forgestart_minio_data}

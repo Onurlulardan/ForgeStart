@@ -321,7 +321,7 @@
         "app": {
           "name": {
             "label": "Application name",
-            "description": "Displayed product name for the starter console"
+            "description": "Displayed product name for the ForgeStart console"
           },
           "logo_url": {
             "label": "Logo URL",

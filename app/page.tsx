@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRightIcon, DatabaseIcon, ShieldCheckIcon, TerminalIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,8 +16,19 @@ export default function Home() {
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl flex-col justify-center gap-8">
         <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
+            <div className="mb-6 flex items-center gap-3">
+              <Image
+                src="/brand/forgestart-mark.svg"
+                alt=""
+                width={44}
+                height={44}
+                className="size-11"
+                priority
+              />
+              <span className="text-sm font-semibold text-muted-foreground">ForgeStart</span>
+            </div>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-              Next.js starter with the boring production pieces already wired.
+              ForgeStart ships the production pieces your Next.js app needs.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
               A maintained V2 foundation for teams that want Auth.js, Drizzle, PostgreSQL, Docker

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import RegisterForm from './register-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -7,12 +8,17 @@ export default function RegisterPage() {
       <div className="grid w-full max-w-5xl overflow-hidden rounded-lg border bg-card shadow-sm md:grid-cols-[1fr_460px]">
         <section className="hidden border-r bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between">
           <div>
-            <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              NS
-            </div>
+            <Image
+              src="/brand/forgestart-mark.svg"
+              alt=""
+              width={40}
+              height={40}
+              className="size-10"
+              priority
+            />
             <h1 className="mt-8 text-3xl font-semibold tracking-tight">Start from a real app</h1>
             <p className="mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
-              Clone, compose up, migrate, seed and ship with a maintained Next.js starter baseline.
+              Clone, compose up, migrate, seed and ship with the ForgeStart baseline.
             </p>
           </div>
           <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-4 text-sm">
@@ -25,7 +31,7 @@ export default function RegisterPage() {
             <CardHeader className="px-1">
               <CardTitle className="text-2xl">Create your account</CardTitle>
               <CardDescription>
-                Use this starter as a clean foundation for your team.
+                Use ForgeStart as a clean foundation for your team.
               </CardDescription>
             </CardHeader>
             <CardContent className="px-1">

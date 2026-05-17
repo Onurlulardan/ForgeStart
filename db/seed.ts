@@ -56,8 +56,8 @@ const DEFAULT_SETTINGS = [
   {
     key: 'app.name',
     label: 'Application name',
-    value: 'Next Starter V2',
-    description: 'Displayed product name for the starter console',
+    value: 'ForgeStart',
+    description: 'Displayed product name for the ForgeStart console',
     isSecret: false,
   },
   {

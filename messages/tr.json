@@ -321,7 +321,7 @@
         "app": {
           "name": {
             "label": "Uygulama adı",
-            "description": "Starter konsolunda gösterilen ürün adı"
+            "description": "ForgeStart konsolunda gösterilen ürün adı"
           },
           "logo_url": {
             "label": "Logo URL",
