@@ -9,7 +9,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -44,7 +43,9 @@ export function LanguageSwitcher() {
         <LanguagesIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuLabel>{t('language')}</DropdownMenuLabel>
+        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">
+          {t('language')}
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           {routing.locales.map((option) => (

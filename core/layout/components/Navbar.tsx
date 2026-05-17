@@ -20,7 +20,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -114,14 +113,14 @@ export default function Navbar({ collapsed, setCollapsed }: NavbarProps) {
               </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>
+              <div className="px-1.5 py-1.5">
                 <span className="block truncate text-sm font-medium">
                   {fullName || user?.email}
                 </span>
                 <span className="mt-1 block truncate text-xs font-normal text-muted-foreground">
                   {user?.email}
                 </span>
-              </DropdownMenuLabel>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem render={<Link href="/administrations/users/profile/edit" />}>

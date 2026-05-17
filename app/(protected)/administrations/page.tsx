@@ -121,8 +121,8 @@ function PermittedCard({ card }: { card: AdminCard }) {
   const Icon = card.icon;
 
   return (
-    <Card className="rounded-lg">
-      <CardHeader>
+    <Card className="h-full rounded-lg">
+      <CardHeader className="flex-1">
         <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
           <Icon className="size-5" />
         </div>

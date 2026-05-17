@@ -22,13 +22,13 @@ export default function RegisterPage() {
 
         <section className="flex items-center justify-center p-6 sm:p-10">
           <Card className="w-full max-w-sm border-0 bg-transparent shadow-none ring-0">
-            <CardHeader className="px-0">
+            <CardHeader className="px-1">
               <CardTitle className="text-2xl">Create your account</CardTitle>
               <CardDescription>
                 Use this starter as a clean foundation for your team.
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-0">
+            <CardContent className="px-1">
               <RegisterForm />
             </CardContent>
           </Card>
