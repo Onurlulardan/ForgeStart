@@ -29,7 +29,6 @@ Important folders:
 app/                  Next.js routes, pages, layouts, APIs and server actions
 components/           App-level components owned by this starter
 components/ui/        shadcn-style primitives
-core/                 Shared layout shell and compatibility components
 db/                   Drizzle schema, connection helpers, migration runner and seeds
 drizzle/              Generated SQL migrations committed to source control
 i18n/                 next-intl routing and request config
@@ -189,7 +188,7 @@ For protected API routes:
 
 ## Upload And Storage Rules
 
-The upload model is represented by `uploads` in `db/schema.ts`. Upload helpers live under `lib/storage/`, and UI components live under `components/uploads/`.
+The upload model is represented by `uploads` in `db/schema/uploads.ts`. Upload helpers live under `lib/storage/`, and UI components live under `components/uploads/`.
 
 Prefer reusing `FileDropzone`, `AvatarUploader`, `UploadPreview` and `FileList` for file workflows. Do not create a second upload abstraction for settings or branding.
 

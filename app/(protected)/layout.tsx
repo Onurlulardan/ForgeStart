@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import Navbar from '@/core/layout/components/Navbar';
-import Sidebar from '@/core/layout/components/Sidebar';
+import Navbar from '@/components/layout/navbar';
+import Sidebar from '@/components/layout/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VerifyEmailBanner } from '@/components/auth/verify-banner';
 import { useAppBranding } from '@/lib/branding/use-app-branding';

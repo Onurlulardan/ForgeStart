@@ -155,7 +155,6 @@ yarn docker:down:volumes # Stop services and remove volumes
 ```text
 app/                  Next.js pages, layouts, route handlers and server actions
 components/           App-level reusable components
-core/                 Shared layout and legacy-compatible shell pieces
 db/                   Drizzle connection helpers, migration runner and seeds
 db/schema/            One file per table; barrel re-export in index.ts
 drizzle/              Generated SQL migrations
