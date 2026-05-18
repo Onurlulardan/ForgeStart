@@ -37,6 +37,32 @@ yarn db:seed:demo
 
 `yarn setup` prints a generated super admin password once. Save it. To regenerate, run `yarn setup --force`.
 
+## Make It Yours
+
+Once the app is running, log in as the super admin and adapt the starter to your project. The most common customization points:
+
+**Branding** — App name and defaults live in [`lib/branding/constants.ts`](lib/branding/constants.ts); logo assets in [`public/brand/`](public/brand). After first boot you can also override branding at runtime from **System Settings → Branding** in the admin UI.
+
+**Translations** — User-facing strings live in [`messages/en.json`](messages/en.json) and [`messages/tr.json`](messages/tr.json). Add a new locale by dropping `messages/<code>.json` and extending the `locales` array in [`i18n/routing.ts`](i18n/routing.ts). Avoid hardcoded JSX text — use `useTranslations` (client) or `getTranslations` (server).
+
+**Database & domain model** — Edit [`db/schema.ts`](db/schema.ts), then run `yarn db:generate` to produce a Drizzle migration. Seed data (RBAC defaults, super admin, app settings) lives in [`db/seed.ts`](db/seed.ts) and is idempotent. To wipe everything locally and start fresh: `yarn db:reset`.
+
+**RBAC (permissions)** — Declare new resources and actions in [`db/seed.ts`](db/seed.ts) (`DEFAULT_RESOURCES`, `DEFAULT_ACTIONS`). Protect server routes with `requireApiPermission('resource', 'action')` from [`lib/auth/server-permissions.ts`](lib/auth/server-permissions.ts). Protect UI with `usePermission` or the wrappers under [`components/permission/`](components/permission). The seed includes an `ALL` resource with `*` action for super admin access — keep it.
+
+**Pages & API routes** — The protected app shell lives under [`app/(protected)/`](app/%28protected%29); add new admin pages there. New API endpoints go under [`app/api/`](app/api). Before creating new primitives, reuse what already exists: [`components/ui/`](components/ui), [`components/data-grid/`](components/data-grid), [`components/uploads/`](components/uploads), [`components/app/`](components/app).
+
+**Theme** — Token defaults are in [`lib/theme/`](lib/theme); end users can tune runtime tokens from **System Settings → Theme** without redeploying.
+
+**Email** — Default driver is `console` (logs each email to stdout — useful in dev). Switch to a real provider in `.env`: `EMAIL_PROVIDER=resend` + `RESEND_API_KEY`, or `EMAIL_PROVIDER=smtp` + `SMTP_HOST/USER/PASSWORD`. Templates live in [`lib/email/templates/`](lib/email/templates).
+
+**Uploads / Storage** — Default driver is local disk (`./public/uploads`). For S3-compatible storage set `STORAGE_DRIVER=s3` and the `STORAGE_S3_*` vars. For local S3 testing without AWS, start MinIO: `docker compose --profile storage up`.
+
+**Deploy** — `yarn docker:up:prod` runs the production profile against the multi-stage [`Dockerfile`](Dockerfile) (no host volumes, no dev server). The same image works on any container platform — set required env via your platform's secret manager and the `env.ts` zod schema will fail fast if anything required is missing.
+
+**Verify** — `yarn doctor` checks required env and DB connectivity. `yarn verify` runs lint + typecheck + tests + build before you push.
+
+For deeper architectural conventions (auth flow, audit logging, server vs client patterns), see [AGENTS.md](AGENTS.md).
+
 ## Stack
 
 - Next.js 16 App Router
