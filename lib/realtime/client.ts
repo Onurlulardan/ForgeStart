@@ -1,6 +1,7 @@
 'use client';
 
 import { io, type Socket } from 'socket.io-client';
+import { env } from '../../env';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -17,11 +18,7 @@ export interface RealtimeClientOptions {
 
 export function getRealtimeClient(options: RealtimeClientOptions = {}): AppSocket {
   if (socket && socket.connected) return socket;
-  const url =
-    options.url ??
-    process.env.NEXT_PUBLIC_REALTIME_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000');
+  const url = options.url ?? env.NEXT_PUBLIC_REALTIME_URL;
   if (socket) {
     socket.connect();
     return socket;

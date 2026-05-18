@@ -23,7 +23,7 @@ services:
       context: .
       target: dev
     environment:
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+      DATABASE_URL: postgres://${POSTGRES_USER:-forgestart}:${POSTGRES_PASSWORD:-forgestart}@postgres:5432/${POSTGRES_DB:-forgestart}
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,7 +35,7 @@ services:
       context: .
       target: dev
     environment:
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+      DATABASE_URL: postgres://${POSTGRES_USER:-forgestart}:${POSTGRES_PASSWORD:-forgestart}@postgres:5432/${POSTGRES_DB:-forgestart}
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
       SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME:-Super}
       SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME:-Admin}
@@ -53,10 +53,12 @@ services:
     environment:
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+      DATABASE_URL: postgres://${POSTGRES_USER:-forgestart}:${POSTGRES_PASSWORD:-forgestart}@postgres:5432/${POSTGRES_DB:-forgestart}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
-      REALTIME_URL: ${DOCKER_REALTIME_URL:-http://realtime:4000}
+      REALTIME_URL: http://realtime:4000
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-change-this-password}
     ports:
       - '${APP_PORT:-3000}:3000'
     volumes:
@@ -74,6 +76,7 @@ services:
       - ./auth.ts:/app/auth.ts
       - ./auth.config.ts:/app/auth.config.ts
       - ./components.json:/app/components.json
+      - ./env.ts:/app/env.ts
       - ./instrumentation.ts:/app/instrumentation.ts
       - ./next.config.ts:/app/next.config.ts
       - ./playwright.config.ts:/app/playwright.config.ts
@@ -93,10 +96,12 @@ services:
       target: dev
     environment:
       AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
-      AUTH_URL: ${DOCKER_APP_URL:-http://app:3000}
+      AUTH_URL: http://app:3000
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       REALTIME_PORT: ${REALTIME_PORT:-4000}
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+      DATABASE_URL: postgres://${POSTGRES_USER:-forgestart}:${POSTGRES_PASSWORD:-forgestart}@postgres:5432/${POSTGRES_DB:-forgestart}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-change-this-password}
     ports:
       - '${REALTIME_PORT:-4000}:4000'
     volumes:
@@ -105,6 +110,7 @@ services:
       - ./db:/app/db
       - ./auth.ts:/app/auth.ts
       - ./auth.config.ts:/app/auth.config.ts
+      - ./env.ts:/app/env.ts
       - ./tsconfig.json:/app/tsconfig.json
     depends_on:
       postgres:
@@ -137,10 +143,12 @@ services:
     environment:
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://forgestart:forgestart@postgres:5432/forgestart}
+      DATABASE_URL: postgres://${POSTGRES_USER:-forgestart}:${POSTGRES_PASSWORD:-forgestart}@postgres:5432/${POSTGRES_DB:-forgestart}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
-      REALTIME_URL: ${DOCKER_REALTIME_URL:-http://realtime:4000}
+      REALTIME_URL: http://realtime:4000
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-change-this-password}
     ports:
       - '${APP_PORT:-3000}:3000'
     networks:

@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { passwordResetTokens, users } from '@/db/schema';
+import { env } from '@/env';
 import { handleRouteError, parseJson } from '@/lib/api/response';
 import { passwordResetRequestSchema } from '@/lib/validation/admin';
 import { generateToken, hashToken } from '@/lib/tokens';
 import { sendEmail } from '@/lib/email';
 import { PasswordResetEmail } from '@/lib/email/templates';
 import { requireRateLimit } from '@/lib/rate-limit/middleware';
-
-function getAppUrl(request: Request) {
-  return process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? new URL(request.url).origin;
-}
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +42,7 @@ export async function POST(request: Request) {
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     });
 
-    const resetUrl = `${getAppUrl(request)}/auth/reset-password?token=${token}`;
+    const resetUrl = `${env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${token}`;
     const recipientName =
       [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
       user.name ||
@@ -59,7 +56,7 @@ export async function POST(request: Request) {
       console.error('[PASSWORD_RESET_EMAIL]', err);
     });
 
-    const includeResetUrlInResponse = process.env.EMAIL_PROVIDER === 'console';
+    const includeResetUrlInResponse = env.EMAIL_PROVIDER === 'console';
 
     return NextResponse.json({
       ok: true,

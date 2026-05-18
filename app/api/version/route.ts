@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { env } from '@/env';
 import packageJson from '@/package.json';
 
 export async function GET() {
@@ -9,6 +10,6 @@ export async function GET() {
     react: packageJson.dependencies.react,
     node: process.version,
     environment: process.env.NODE_ENV ?? 'development',
-    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT_SHA ?? null,
+    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? env.GIT_COMMIT_SHA,
   });
 }

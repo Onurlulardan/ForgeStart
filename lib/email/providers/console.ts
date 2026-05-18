@@ -1,4 +1,5 @@
 import 'server-only';
+import { env } from '../../../env';
 import type { EmailMessage, EmailProvider, EmailSendResult } from '../provider';
 import { renderToHtml, renderToText } from '../render';
 
@@ -12,7 +13,7 @@ export class ConsoleEmailProvider implements EmailProvider {
 
     console.log('\n┌─── EMAIL ──────────────────────────────────────────────');
     console.log('│ To:      ', Array.isArray(message.to) ? message.to.join(', ') : message.to);
-    console.log('│ From:    ', message.from ?? process.env.EMAIL_FROM ?? '(unset)');
+    console.log('│ From:    ', message.from ?? env.EMAIL_FROM ?? '(unset)');
     console.log('│ Subject: ', message.subject);
     if (text) {
       console.log('│');

@@ -3,15 +3,12 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { roles, userRoles, users } from '@/db/schema';
+import { env } from '@/env';
 import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
 import { logSecurityEvent } from '@/lib/auth/session-data';
 import { sendVerificationEmail } from '@/lib/auth/email-verification';
 import { requireRateLimit } from '@/lib/rate-limit/middleware';
 import { registerSchema } from '@/lib/validation/admin';
-
-function getAppUrl(request: Request) {
-  return process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? new URL(request.url).origin;
-}
 
 export async function POST(request: Request) {
   try {
@@ -65,7 +62,7 @@ export async function POST(request: Request) {
       request,
     });
 
-    sendVerificationEmail(result.user, getAppUrl(request)).catch((err) => {
+    sendVerificationEmail(result.user, env.NEXT_PUBLIC_APP_URL).catch((err) => {
       console.error('[REGISTER_VERIFY_EMAIL]', err);
     });
 

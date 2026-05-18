@@ -1,4 +1,5 @@
 import 'server-only';
+import { env } from '../../env';
 import type { ServerToClientEvents } from './types';
 
 export interface ServerEmitInput<T extends keyof ServerToClientEvents> {
@@ -13,21 +14,18 @@ export interface ServerEmitResult {
 }
 
 function realtimeUrl(): string {
-  return process.env.REALTIME_URL ?? `http://localhost:${process.env.REALTIME_PORT ?? 4000}`;
+  return env.REALTIME_URL ?? `http://localhost:${env.REALTIME_PORT}`;
 }
 
 export async function emitToRealtime<T extends keyof ServerToClientEvents>(
   input: ServerEmitInput<T>
 ): Promise<ServerEmitResult> {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) return { ok: false, delivered: false };
-
   try {
     const response = await fetch(`${realtimeUrl().replace(/\/+$/, '')}/internal/emit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${secret}`,
+        Authorization: `Bearer ${env.AUTH_SECRET}`,
       },
       body: JSON.stringify(input),
     });

@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { Server, type Socket } from 'socket.io';
+import { env } from '../env';
 import type {
   ClientToServerEvents,
   InterServerEvents,
@@ -17,13 +18,10 @@ type AppServerSocket = Socket<
   SocketData
 >;
 
-const PORT = Number(process.env.REALTIME_PORT ?? 4000);
-const PUBLIC_APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  process.env.AUTH_URL ??
-  'http://localhost:3000';
-const AUTH_URL = process.env.AUTH_URL ?? PUBLIC_APP_URL;
-const INTERNAL_SECRET = process.env.AUTH_SECRET ?? '';
+const PORT = env.REALTIME_PORT;
+const PUBLIC_APP_URL = env.NEXT_PUBLIC_APP_URL;
+const AUTH_URL = env.AUTH_URL;
+const INTERNAL_SECRET = env.AUTH_SECRET;
 
 interface InternalEmitBody {
   event: keyof ServerToClientEvents;

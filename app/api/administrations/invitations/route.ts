@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { desc, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { invitations, organizations, roles, users } from '@/db/schema';
+import { env } from '@/env';
 import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
 import { requireApiPermission } from '@/lib/auth/server-permissions';
 import { invitationCreateSchema } from '@/lib/validation/admin';
@@ -9,10 +10,6 @@ import { generateToken, hashToken } from '@/lib/tokens';
 import { writeAuditLog } from '@/lib/audit';
 import { sendEmail } from '@/lib/email';
 import { InvitationEmail } from '@/lib/email/templates';
-
-function getAppUrl(request: Request) {
-  return process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? new URL(request.url).origin;
-}
 
 export async function GET() {
   try {
@@ -89,7 +86,7 @@ export async function POST(request: Request) {
       })
       .returning();
 
-    const acceptUrl = `${getAppUrl(request)}/auth/accept-invite?token=${token}`;
+    const acceptUrl = `${env.NEXT_PUBLIC_APP_URL}/auth/accept-invite?token=${token}`;
 
     const inviter = authz.session.user;
     const inviterName =

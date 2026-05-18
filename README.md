@@ -15,26 +15,23 @@ git clone https://github.com/Onurlulardan/ForgeStart.git
 cd ForgeStart
 corepack enable
 yarn install
-cp .env.example .env
-yarn docker dev
+yarn setup        # generates .env, AUTH_SECRET, and a random admin password
+yarn dev:docker   # Postgres in Docker, Next.js + Realtime on host
 ```
 
-`yarn docker dev` starts PostgreSQL in Docker, runs Drizzle migrations, seeds the database, and starts Next.js locally with hot reload.
+Pick the run mode that fits you:
 
-For a richer demo database, run this in a second terminal after the app is ready:
+- `yarn dev:docker` — Postgres in Docker, app on host (recommended).
+- `yarn dev` — full local, you bring your own Postgres and set `DATABASE_URL`.
+- `yarn docker:up` — full Docker stack (Postgres + app + realtime in containers).
+
+After the app is ready, optionally enrich the database with demo content:
 
 ```bash
 yarn db:seed:demo
 ```
 
-Default local login:
-
-```text
-Email: superadmin@example.com
-Password: change-this-password
-```
-
-Change these values in `.env` before sharing or deploying the app.
+`yarn setup` prints a generated super admin password once. Save it. To regenerate, run `yarn setup --force`.
 
 ## Stack
 
@@ -68,26 +65,31 @@ Change these values in `.env` before sharing or deploying the app.
 
 ## Environment
 
-Create `.env` from `.env.example`.
+Run `yarn setup` to create `.env` with a generated `AUTH_SECRET` and admin password. Otherwise copy `.env.example` to `.env` manually.
 
-Important values:
+Required values (only these need to be set for local dev):
 
 ```env
+AUTH_SECRET=<32+ char random string>
 AUTH_URL=http://localhost:3000
-AUTH_SECRET=replace-with-a-random-secret-at-least-32-characters
 DATABASE_URL=postgres://forgestart:forgestart@localhost:5432/forgestart
-DOCKER_DATABASE_URL=postgres://forgestart:forgestart@postgres:5432/forgestart
 SUPER_ADMIN_EMAIL=superadmin@example.com
-SUPER_ADMIN_PASSWORD=change-this-password
+SUPER_ADMIN_PASSWORD=<choose-something>
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Use `DATABASE_URL` for commands running on the host machine. Docker services use `DOCKER_DATABASE_URL`, where the database host is `postgres`.
+All other variables (S3 storage, Resend/SMTP email, Upstash rate-limit, realtime, observability) are optional and ship with safe defaults — see `.env.example` for the full list with descriptions.
+
+Env vars are validated at boot through `env.ts` (zod). Missing or invalid required values fail fast with a clear message.
+
+Inside Docker, the app container reaches the database at `postgres:5432` (hardcoded in `compose.yaml`); on the host the same database is reached via `localhost:5432`. You no longer need to set a separate `DOCKER_DATABASE_URL` — Compose builds the internal URL from `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`.
 
 ## Commands
 
 ```bash
-yarn dev              # Start Next.js locally
-yarn docker dev       # Preferred local setup: Docker DB plus local Next.js
+yarn setup            # Create .env, generate AUTH_SECRET and admin password
+yarn dev              # Start Next.js + Realtime locally (BYO Postgres)
+yarn dev:docker       # Postgres in Docker, Next.js + Realtime on host (recommended)
 yarn build            # Production build
 yarn start            # Start production build
 yarn lint             # ESLint
@@ -109,10 +111,9 @@ yarn db:reset         # Drop schemas, migrate and seed
 yarn db:studio        # Open Drizzle Studio
 ```
 
-Docker:
+Docker (full stack in containers):
 
 ```bash
-yarn docker:dev       # Same as yarn docker dev
 yarn docker:up        # Run full dev profile in Docker
 yarn docker:up:prod   # Run production-like profile
 yarn docker:down      # Stop Compose services

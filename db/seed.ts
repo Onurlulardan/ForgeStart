@@ -3,6 +3,7 @@ import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { env } from '../env';
 import { createNodeDb } from './node';
 import * as schema from './schema';
 import {
@@ -204,10 +205,10 @@ async function upsertSetting(db: Db, value: (typeof DEFAULT_SETTINGS)[number]) {
 }
 
 async function upsertSuperAdmin(db: Db) {
-  const email = process.env.SUPER_ADMIN_EMAIL ?? 'superadmin@example.com';
-  const firstName = process.env.SUPER_ADMIN_FIRST_NAME ?? 'Super';
-  const lastName = process.env.SUPER_ADMIN_LAST_NAME ?? 'Admin';
-  const password = process.env.SUPER_ADMIN_PASSWORD ?? 'change-this-password';
+  const email = env.SUPER_ADMIN_EMAIL;
+  const firstName = env.SUPER_ADMIN_FIRST_NAME;
+  const lastName = env.SUPER_ADMIN_LAST_NAME;
+  const password = env.SUPER_ADMIN_PASSWORD;
 
   if (process.env.NODE_ENV === 'production' && password === 'change-this-password') {
     throw new Error('SUPER_ADMIN_PASSWORD must be changed before production seeding');

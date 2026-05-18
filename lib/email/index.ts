@@ -1,4 +1,5 @@
 import 'server-only';
+import { env } from '../../env';
 import { ConsoleEmailProvider } from './providers/console';
 import { ResendEmailProvider } from './providers/resend';
 import { SmtpEmailProvider } from './providers/smtp';
@@ -7,23 +8,20 @@ import type { EmailMessage, EmailProvider, EmailSendResult } from './provider';
 let cached: EmailProvider | null = null;
 
 function buildProvider(): EmailProvider {
-  const driver = (process.env.EMAIL_PROVIDER ?? 'console').toLowerCase();
-  const defaultFrom = process.env.EMAIL_FROM;
-
-  if (driver === 'resend' && process.env.RESEND_API_KEY) {
-    return new ResendEmailProvider(process.env.RESEND_API_KEY, defaultFrom);
+  if (env.EMAIL_PROVIDER === 'resend' && env.RESEND_API_KEY) {
+    return new ResendEmailProvider(env.RESEND_API_KEY, env.EMAIL_FROM);
   }
 
-  if (driver === 'smtp' && process.env.SMTP_HOST) {
+  if (env.EMAIL_PROVIDER === 'smtp' && env.SMTP_HOST) {
     return new SmtpEmailProvider({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: process.env.SMTP_SECURE === 'true',
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      secure: env.SMTP_SECURE ?? false,
       auth:
-        process.env.SMTP_USER && process.env.SMTP_PASSWORD
-          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
+        env.SMTP_USER && env.SMTP_PASSWORD
+          ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD }
           : undefined,
-      defaultFrom,
+      defaultFrom: env.EMAIL_FROM,
     });
   }
 

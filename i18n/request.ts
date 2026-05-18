@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { getRequestConfig } from 'next-intl/server';
+import { env } from '../env';
 import { routing, type AppLocale } from './routing';
 
 function isAppLocale(value: string | undefined): value is AppLocale {
@@ -23,7 +24,7 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    timeZone: process.env.APP_TIMEZONE ?? 'Europe/Istanbul',
+    timeZone: env.APP_TIMEZONE,
     now: new Date(),
     messages,
   };

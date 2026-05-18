@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { env } from '@/env';
 import { handleRouteError, jsonError } from '@/lib/api/response';
 import { resendVerificationEmail } from '@/lib/auth/email-verification';
 import { requireRateLimit } from '@/lib/rate-limit/middleware';
-
-function getAppUrl(request: Request) {
-  return process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? new URL(request.url).origin;
-}
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +17,7 @@ export async function POST(request: Request) {
     });
     if (!rate.ok) return rate.response;
 
-    const outcome = await resendVerificationEmail(session.user.id, getAppUrl(request));
+    const outcome = await resendVerificationEmail(session.user.id, env.NEXT_PUBLIC_APP_URL);
     if (!outcome.ok) {
       return NextResponse.json(
         { ok: false, reason: outcome.reason, retryAfterSeconds: outcome.retryAfterSeconds },

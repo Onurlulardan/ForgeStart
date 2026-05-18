@@ -1,15 +1,11 @@
 'use server';
 
-import { headers } from 'next/headers';
+import { env } from '@/env';
 import { failure, success, withAuth, withRateLimit } from '@/lib/actions';
 import { resendVerificationEmail } from '@/lib/auth/email-verification';
 
 async function getAppUrl(): Promise<string> {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  const headerList = await headers();
-  const host = headerList.get('host') ?? 'localhost:3000';
-  const proto = headerList.get('x-forwarded-proto') ?? 'http';
-  return `${proto}://${host}`;
+  return env.NEXT_PUBLIC_APP_URL;
 }
 
 export const resendVerificationEmailAction = withAuth(async (session) => {

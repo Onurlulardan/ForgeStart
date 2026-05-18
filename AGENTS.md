@@ -58,7 +58,8 @@ Important entry points:
 - `db/schema.ts` is the database source of truth.
 - `db/seed.ts` owns base RBAC, settings and super admin data.
 - `db/reset.ts` drops both `public` and `drizzle` schemas, migrates and seeds.
-- `scripts/docker-dev.mjs` powers `yarn docker dev`.
+- `scripts/docker-dev.mjs` powers `yarn dev:docker`.
+- `env.ts` is the single zod-validated source of truth for environment variables; modules import `env` from it instead of reading `process.env` directly.
 
 ## Development Workflow
 
@@ -67,11 +68,17 @@ Prefer this setup for local development:
 ```bash
 corepack enable
 yarn install
-cp .env.example .env
-yarn docker dev
+yarn setup
+yarn dev:docker
 ```
 
-`yarn docker dev` starts PostgreSQL through Docker Compose, waits for readiness, applies migrations, seeds the database, then runs `yarn dev` on the host machine. Keep this behavior. It exists because running Next.js on the host gives better hot reload than the full app container on Windows and macOS.
+`yarn setup` creates `.env` from `.env.example` and generates a 32+ char `AUTH_SECRET` and a random `SUPER_ADMIN_PASSWORD` (printed once). `yarn dev:docker` starts PostgreSQL through Docker Compose, waits for readiness, applies migrations, seeds the database, then runs `yarn dev` on the host machine (Next.js + Realtime via `concurrently`). Keep this behavior. It exists because running Next.js on the host gives better hot reload than the full app container on Windows and macOS.
+
+Three named modes are supported. Do not introduce a fourth:
+
+- `yarn dev` — saf local (developer brings own Postgres, sets `DATABASE_URL`).
+- `yarn dev:docker` — hybrid (Postgres in Docker, app on host). Recommended.
+- `yarn docker:up` — full Docker stack (everything in containers).
 
 Use these verification commands:
 
@@ -189,14 +196,7 @@ Local storage is the default. S3-compatible storage is supported by configuratio
 
 The realtime server lives in `server/` and is separate from the Next.js runtime. Keep realtime-specific logic out of regular React components unless the component is explicitly consuming realtime state.
 
-Use:
-
-```bash
-yarn realtime:dev
-yarn realtime:start
-```
-
-when working on the realtime service.
+`yarn dev` (and therefore `yarn dev:docker`) already starts both Next.js and the realtime server via `concurrently`. There is no separate `yarn realtime:dev` script — if you need only the realtime process (e.g. inside a Docker container), use `yarn realtime:start`, which runs `tsx server/index.ts`.
 
 ## Documentation Rules
 

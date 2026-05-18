@@ -1,3 +1,4 @@
+import { env } from '../../env';
 import { MemoryRateLimiter } from './memory';
 import { UpstashRateLimiter } from './upstash';
 import type { RateLimitOptions, RateLimitResult, RateLimiter } from './provider';
@@ -6,10 +7,8 @@ let cached: RateLimiter | null = null;
 
 export function getRateLimiter(): RateLimiter {
   if (cached) return cached;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (url && token) {
-    cached = new UpstashRateLimiter(url, token);
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+    cached = new UpstashRateLimiter(env.UPSTASH_REDIS_REST_URL, env.UPSTASH_REDIS_REST_TOKEN);
   } else {
     cached = new MemoryRateLimiter();
   }

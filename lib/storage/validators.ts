@@ -1,3 +1,5 @@
+import { env } from '../../env';
+
 export const IMAGE_MIME_TYPES = [
   'image/jpeg',
   'image/png',
@@ -35,8 +37,7 @@ export function validateUpload(
   file: { mime: string; size: number; name: string },
   options: ValidationOptions = {}
 ): ValidationResult {
-  const maxSize =
-    options.maxSize ?? Number(process.env.STORAGE_MAX_FILE_SIZE ?? 10 * 1024 * 1024);
+  const maxSize = options.maxSize ?? env.STORAGE_MAX_FILE_SIZE;
   const allowed = options.imageOnly
     ? IMAGE_MIME_TYPES
     : (options.allowedMimes ?? ALLOWED_MIME_TYPES);

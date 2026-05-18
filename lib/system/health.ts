@@ -1,5 +1,6 @@
 import packageJson from '@/package.json';
 import { pool } from '@/db';
+import { env } from '@/env';
 
 export async function getMigrationStatus() {
   const relation = await pool.query<{ exists: string | null }>(
@@ -42,7 +43,7 @@ export async function getHealthStatus() {
       version: packageJson.version,
       node: process.version,
       environment: process.env.NODE_ENV ?? 'development',
-      commit: process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT_SHA ?? null,
+      commit: process.env.VERCEL_GIT_COMMIT_SHA ?? env.GIT_COMMIT_SHA,
     },
     database: {
       connected: Boolean(databaseRow?.ok),

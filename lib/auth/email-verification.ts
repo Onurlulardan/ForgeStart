@@ -3,6 +3,7 @@ import { and, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { emailVerificationTokens, users } from '@/db/schema';
 import type { User } from '@/db/types';
+import { env } from '@/env';
 import { sendEmail } from '@/lib/email';
 import { VerifyEmail, WelcomeEmail } from '@/lib/email/templates';
 import { generateToken, hashToken } from '@/lib/tokens';
@@ -142,8 +143,7 @@ export async function verifyEmailToken(token: string): Promise<VerifyOutcome> {
 
   if (recipient) {
     const verifiedRecipient: VerifiedRecipient = recipient;
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? 'http://localhost:3000';
+    const appUrl = env.NEXT_PUBLIC_APP_URL;
     const recipientName =
       [verifiedRecipient.firstName, verifiedRecipient.lastName].filter(Boolean).join(' ').trim() ||
       verifiedRecipient.name ||

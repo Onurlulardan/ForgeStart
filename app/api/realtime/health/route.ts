@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import { env } from '@/env';
 
 export async function GET() {
-  const url = process.env.REALTIME_URL ?? `http://localhost:${process.env.REALTIME_PORT ?? 4000}`;
+  const url = env.REALTIME_URL ?? `http://localhost:${env.REALTIME_PORT}`;
   try {
     const response = await fetch(`${url.replace(/\/+$/, '')}/health`, { cache: 'no-store' });
     if (!response.ok) {

@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from 'next-auth';
+import { env } from './env';
 
 const PROTECTED_PATH_PREFIXES = ['/dashboard', '/administrations'];
 
@@ -9,8 +10,8 @@ function isProtectedPath(pathname: string): boolean {
 export default {
   session: {
     strategy: 'jwt',
-    maxAge: Number(process.env.AUTH_SESSION_MAX_AGE) || 7 * 24 * 60 * 60,
-    updateAge: Number(process.env.AUTH_SESSION_UPDATE_AGE) || 60 * 60,
+    maxAge: env.AUTH_SESSION_MAX_AGE,
+    updateAge: env.AUTH_SESSION_UPDATE_AGE,
   },
   pages: {
     signIn: '/auth/login',

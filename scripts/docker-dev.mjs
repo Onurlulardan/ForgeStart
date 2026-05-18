@@ -9,11 +9,7 @@ function sleep(ms) {
 }
 
 function run(command, args, options = {}) {
-  const {
-    allowFailure = false,
-    env = process.env,
-    stdio = 'inherit',
-  } = options;
+  const { allowFailure = false, env = process.env, stdio = 'inherit' } = options;
 
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -58,11 +54,6 @@ function buildLocalEnv() {
 
   return {
     ...process.env,
-    AUTH_URL: process.env.AUTH_URL ?? 'http://localhost:3000',
-    AUTH_SECRET:
-      process.env.AUTH_SECRET ?? 'replace-with-a-random-secret-at-least-32-characters',
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
-    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:4000',
     FORGESTART_SKIP_PREDEV_MIGRATE: '1',
     DATABASE_URL:
       process.env.DATABASE_URL ??
@@ -77,6 +68,7 @@ async function waitForPostgres(env) {
   const database = env.POSTGRES_DB ?? 'forgestart';
 
   process.stdout.write('Waiting for PostgreSQL');
+  let waited = 0;
   while (Date.now() < deadline) {
     const code = await run(
       'docker',
@@ -90,6 +82,10 @@ async function waitForPostgres(env) {
     }
 
     process.stdout.write('.');
+    waited += 1;
+    if (waited > 0 && waited % 10 === 0) {
+      process.stdout.write(` (${waited}/${timeoutSeconds}s)`);
+    }
     await sleep(1000);
   }
 
@@ -117,7 +113,7 @@ export async function runDockerDev(devArgs = []) {
   console.log('Seeding the local database...');
   await run('yarn', ['db:seed'], { env });
 
-  console.log('Starting local Next.js dev server with yarn dev...');
+  console.log('Starting local Next.js + Realtime via yarn dev...');
   await run('yarn', ['dev', ...devArgs], { env });
 }
 

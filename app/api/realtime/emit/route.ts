@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
+import { env } from '@/env';
 import { hasSessionPermission } from '@/lib/auth/permissions';
 import { handleRouteError, jsonError, parseJson } from '@/lib/api/response';
 
@@ -28,13 +29,12 @@ export async function POST(request: Request) {
     if (!parsed.ok) return parsed.response;
     const body = parsed.data as EmitBody;
 
-    const realtimeUrl =
-      process.env.REALTIME_URL ?? `http://localhost:${process.env.REALTIME_PORT ?? 4000}`;
+    const realtimeUrl = env.REALTIME_URL ?? `http://localhost:${env.REALTIME_PORT}`;
     const response = await fetch(`${realtimeUrl.replace(/\/+$/, '')}/internal/emit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.AUTH_SECRET ?? ''}`,
+        Authorization: `Bearer ${env.AUTH_SECRET}`,
       },
       body: JSON.stringify(body),
     }).catch(() => null);
