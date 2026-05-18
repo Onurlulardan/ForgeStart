@@ -40,7 +40,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}-mono
+  # Product name (ForgeStart) instead of the repo name (nextjstemplate) so
+  # the published image matches the deployment naming convention.
+  IMAGE_NAME: ${{ github.repository_owner }}/forgestart-mono
 
 jobs:
   build-and-push:
