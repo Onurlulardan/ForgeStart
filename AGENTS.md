@@ -109,8 +109,11 @@ Drizzle is the only database abstraction. Do not add Knex, Prisma, raw migration
 
 When changing database structure:
 
-1. Update `db/schema.ts`.
-2. Generate a migration with `yarn db:generate`.
+1. Edit (or add) a file under `db/schema/`. Adding a new table:
+   - Create `db/schema/<table-name>.ts` with the `pgTable` definition.
+   - Re-export it from `db/schema/index.ts` (group with related tables for readability).
+   - If it needs a `relations()` block, add it to `db/schema/relations.ts` (never inline relations in the table file — they import from many tables and we keep that cross-cutting concern in one place to avoid circular imports).
+2. Generate a migration with `yarn db:generate`. The Drizzle Kit config (`drizzle.config.ts`) globs `./db/schema/*.ts`, so it will pick up new files automatically.
 3. Review the generated SQL in `drizzle/`.
 4. Update seeds in `db/seed.ts` if the base system needs new data.
 5. Run `yarn db:reset`.

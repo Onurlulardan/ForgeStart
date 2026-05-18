@@ -45,7 +45,7 @@ Once the app is running, log in as the super admin and adapt the starter to your
 
 **Translations** — User-facing strings live in [`messages/en.json`](messages/en.json) and [`messages/tr.json`](messages/tr.json). Add a new locale by dropping `messages/<code>.json` and extending the `locales` array in [`i18n/routing.ts`](i18n/routing.ts). Avoid hardcoded JSX text — use `useTranslations` (client) or `getTranslations` (server).
 
-**Database & domain model** — Edit [`db/schema.ts`](db/schema.ts), then run `yarn db:generate` to produce a Drizzle migration. Seed data (RBAC defaults, super admin, app settings) lives in [`db/seed.ts`](db/seed.ts) and is idempotent. To wipe everything locally and start fresh: `yarn db:reset`.
+**Database & domain model** — Each table lives in its own file under [`db/schema/`](db/schema). To add a new entity (say, `products`), drop in [`db/schema/products.ts`](db/schema), re-export it from [`db/schema/index.ts`](db/schema/index.ts), add any cross-table relations to [`db/schema/relations.ts`](db/schema/relations.ts), then run `yarn db:generate` to produce a Drizzle migration. Seed data (RBAC defaults, super admin, app settings) lives in [`db/seed.ts`](db/seed.ts) and is idempotent. To wipe everything locally and start fresh: `yarn db:reset`.
 
 **RBAC (permissions)** — Declare new resources and actions in [`db/seed.ts`](db/seed.ts) (`DEFAULT_RESOURCES`, `DEFAULT_ACTIONS`). Protect server routes with `requireApiPermission('resource', 'action')` from [`lib/auth/server-permissions.ts`](lib/auth/server-permissions.ts). Protect UI with `usePermission` or the wrappers under [`components/permission/`](components/permission). The seed includes an `ALL` resource with `*` action for super admin access — keep it.
 
@@ -156,7 +156,8 @@ yarn docker:down:volumes # Stop services and remove volumes
 app/                  Next.js pages, layouts, route handlers and server actions
 components/           App-level reusable components
 core/                 Shared layout and legacy-compatible shell pieces
-db/                   Drizzle schema, node connection, migrations runner and seeds
+db/                   Drizzle connection helpers, migration runner and seeds
+db/schema/            One file per table; barrel re-export in index.ts
 drizzle/              Generated SQL migrations
 i18n/                 next-intl routing and request config
 lib/                  Auth, API, branding, storage, theme, validation and system helpers
