@@ -20,8 +20,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgestart}
       POSTGRES_DB: ${POSTGRES_DB:-forgestart}
     ports:
-      - '${APP_PORT:-3000}:3000'
-      - '${REALTIME_PORT:-4000}:4000'
+      # Bind to ${HTTP_BIND} on the host (default 127.0.0.1 — reverse proxy
+      # only). Set HTTP_BIND=0.0.0.0 to expose ports publicly (rare on prod).
+      - '${HTTP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000'
+      - '${HTTP_BIND:-127.0.0.1}:${REALTIME_PORT:-4000}:4000'
     volumes:
       - mono-pgdata:/var/lib/postgresql/data
     restart: unless-stopped
