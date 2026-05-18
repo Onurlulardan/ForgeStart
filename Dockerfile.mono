@@ -1,0 +1,50 @@
+# syntax=docker/dockerfile:1
+# Mono container: PostgreSQL + Next.js + Realtime in a single image, managed by supervisord.
+
+FROM node:24-alpine AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable
+COPY package.json yarn.lock .yarnrc.yml ./
+RUN yarn install --immutable
+COPY . .
+RUN yarn build
+
+FROM node:24-alpine AS mono
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PGDATA=/var/lib/postgresql/data \
+    POSTGRES_USER=forgestart \
+    POSTGRES_PASSWORD=forgestart \
+    POSTGRES_DB=forgestart \
+    DATABASE_URL=postgres://forgestart:forgestart@127.0.0.1:5432/forgestart \
+    REALTIME_PORT=4000 \
+    REALTIME_URL=http://127.0.0.1:4000
+
+RUN apk add --no-cache \
+      postgresql17 \
+      postgresql17-contrib \
+      postgresql17-client \
+      supervisor \
+      su-exec \
+      bash \
+    && mkdir -p /var/lib/postgresql/data /run/postgresql \
+    && chown -R postgres:postgres /var/lib/postgresql/data /run/postgresql \
+    && chmod 700 /var/lib/postgresql/data
+
+RUN corepack enable
+
+COPY --from=builder /app /app
+
+COPY scripts/mono-entrypoint.sh /usr/local/bin/mono-entrypoint.sh
+COPY scripts/mono-init-db.sh /usr/local/bin/mono-init-db.sh
+COPY scripts/mono-supervisord.conf /etc/supervisord.conf
+RUN chmod +x /usr/local/bin/mono-entrypoint.sh /usr/local/bin/mono-init-db.sh
+
+EXPOSE 3000 4000
+
+VOLUME ["/var/lib/postgresql/data"]
+
+ENTRYPOINT ["/usr/local/bin/mono-entrypoint.sh"]

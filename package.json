@@ -40,6 +40,12 @@
     "docker:seed": "docker compose --profile seed run --rm seed",
     "docker:logs": "docker compose --profile dev logs -f",
     "docker:ps": "docker compose --profile dev ps",
+    "docker:mono:build": "docker compose -f compose.mono.yaml build",
+    "docker:mono:up": "docker compose -f compose.mono.yaml up",
+    "docker:mono:up:build": "docker compose -f compose.mono.yaml up --build",
+    "docker:mono:down": "docker compose -f compose.mono.yaml down --remove-orphans",
+    "docker:mono:down:volumes": "docker compose -f compose.mono.yaml down --volumes --remove-orphans",
+    "docker:mono:logs": "docker compose -f compose.mono.yaml logs -f",
     "verify": "yarn lint && yarn typecheck && yarn test && yarn build"
   },
   "dependencies": {

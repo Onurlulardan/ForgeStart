@@ -1,0 +1,31 @@
+name: forgestart-mono
+
+services:
+  mono:
+    build:
+      context: .
+      dockerfile: Dockerfile.mono
+      target: mono
+    image: forgestart-mono:latest
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:-replace-with-a-random-secret-at-least-32-characters}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@example.com}
+      SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME:-Super}
+      SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME:-Admin}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-change-this-password}
+      POSTGRES_USER: ${POSTGRES_USER:-forgestart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgestart}
+      POSTGRES_DB: ${POSTGRES_DB:-forgestart}
+    ports:
+      - '${APP_PORT:-3000}:3000'
+      - '${REALTIME_PORT:-4000}:4000'
+    volumes:
+      - mono-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  mono-pgdata:
+    name: ${MONO_PGDATA_VOLUME:-forgestart_mono_pgdata}
