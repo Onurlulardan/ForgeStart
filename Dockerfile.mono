@@ -3,12 +3,15 @@
 
 FROM node:24-alpine AS builder
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_APP_URL=http://forgestart-app.invalid \
+    NEXT_PUBLIC_REALTIME_URL=http://forgestart-realtime.invalid
 RUN corepack enable
 COPY package.json yarn.lock .yarnrc.yml ./
 RUN yarn install --immutable
 COPY . .
 RUN yarn build
+RUN cp -al /app/.next /app/.next.original
 
 FROM node:24-alpine AS mono
 WORKDIR /app

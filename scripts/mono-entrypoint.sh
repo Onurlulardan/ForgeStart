@@ -31,4 +31,29 @@ fi
 
 export PGDATA POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
 
+# --- NEXT_PUBLIC_* runtime injection ---------------------------------------
+# Next.js bakes NEXT_PUBLIC_* into client bundles at build time. To allow the
+# mono image to be reused with different domains, the build stamps placeholder
+# URLs that we replace with the user's runtime values here.
+APP_URL="${NEXT_PUBLIC_APP_URL:-http://localhost:3000}"
+REALTIME_URL_PUBLIC="${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4000}"
+
+if [ -d /app/.next.original ]; then
+  echo "[mono] Restoring pristine .next from /app/.next.original"
+  rm -rf /app/.next
+  cp -al /app/.next.original /app/.next
+fi
+
+echo "[mono] Injecting NEXT_PUBLIC_APP_URL=$APP_URL"
+echo "[mono] Injecting NEXT_PUBLIC_REALTIME_URL=$REALTIME_URL_PUBLIC"
+find /app/.next/static /app/.next/server -type f \( -name '*.js' -o -name '*.json' -o -name '*.html' -o -name '*.css' \) \
+  -exec sed -i \
+    -e "s|http://forgestart-app.invalid|$APP_URL|g" \
+    -e "s|http://forgestart-realtime.invalid|$REALTIME_URL_PUBLIC|g" \
+    {} +
+
+export NEXT_PUBLIC_APP_URL="$APP_URL"
+export NEXT_PUBLIC_REALTIME_URL="$REALTIME_URL_PUBLIC"
+# --- end NEXT_PUBLIC_* runtime injection -----------------------------------
+
 exec supervisord -c /etc/supervisord.conf -n
