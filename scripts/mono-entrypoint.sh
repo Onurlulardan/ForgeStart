@@ -31,6 +31,12 @@ fi
 
 export PGDATA POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
 
+# Build DATABASE_URL from POSTGRES_* at runtime so it stays in sync with
+# whatever password initdb used. The Dockerfile-level ENV is just a default
+# for local builds; overriding it here lets supervisord pass the correct
+# URL to next + realtime + migrate + seed via inherited environment.
+export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB}"
+
 # --- NEXT_PUBLIC_* runtime injection ---------------------------------------
 # Next.js bakes NEXT_PUBLIC_* into client bundles at build time. To allow the
 # mono image to be reused with different domains, the build stamps placeholder
