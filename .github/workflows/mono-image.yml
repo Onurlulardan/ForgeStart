@@ -1,0 +1,112 @@
+name: Mono image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths:
+      - 'Dockerfile.mono'
+      - 'scripts/mono-*.sh'
+      - 'scripts/mono-*.conf'
+      - 'compose.mono.yaml'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.yarnrc.yml'
+      - 'app/**'
+      - 'components/**'
+      - 'contexts/**'
+      - 'core/**'
+      - 'db/**'
+      - 'drizzle/**'
+      - 'hooks/**'
+      - 'lib/**'
+      - 'public/**'
+      - 'server/**'
+      - 'auth.ts'
+      - 'auth.config.ts'
+      - 'env.ts'
+      - 'instrumentation.ts'
+      - 'next.config.ts'
+      - 'proxy.ts'
+      - 'tailwind.config.ts'
+      - 'tsconfig.json'
+      - '.github/workflows/mono-image.yml'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Extra tag to publish (e.g. demo, rc1). Leave empty to skip.'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-mono
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image reference
+        id: image
+        run: |
+          NAME="$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.mono
+          target: mono
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Image summary
+        run: |
+          {
+            echo "### Mono image published"
+            echo ""
+            echo "**Tags:**"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo ""
+            echo "**Pull:**"
+            echo '```'
+            echo "docker pull ${{ steps.image.outputs.name }}:latest"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
