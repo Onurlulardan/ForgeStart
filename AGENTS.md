@@ -4,7 +4,7 @@ This file guides AI agents working on ForgeStart. Read it before making code cha
 
 ## Project Identity
 
-ForgeStart is an open source, production-ready Next.js starter for SaaS and internal admin products. It is not a landing-page template. Treat it as a clone-and-run application foundation with real authentication, RBAC, organizations, uploads, settings, audit trails, Docker workflows, and operational checks.
+ForgeStart is an open-source Next.js starter template derived from the architectural patterns used in [ForgeCRUD](https://forgecrud.io/). It is a clone-and-extend application foundation with real authentication, RBAC, organizations, uploads, settings, audit trails, Docker workflows, and operational checks — intended as a head start for specialized operational software (stock tracking, B2B CRM, internal admin tools), not as a finished product.
 
 The public project name is `ForgeStart`. Avoid reintroducing older names such as `Next Starter`, `Next Starter V2`, `nextjsstarter`, or `nextjstemplate` in user-facing code, docs, package metadata, seed data, UI labels, or generated assets.
 

@@ -4,7 +4,11 @@
 
 # ForgeStart
 
-ForgeStart is a production-ready Next.js starter for admin-heavy SaaS products. It ships with authentication, RBAC, organizations, invitations, API keys, audit logs, uploads, theming, i18n, Docker, PostgreSQL, Drizzle ORM, and a ready admin shell.
+ForgeStart is an open-source SaaS starter template built from the architectural patterns used while developing [ForgeCRUD](https://forgecrud.io/).
+
+It is not a finished product. Treat it as a starting point for specialized operational software — stock tracking apps, B2B CRMs, internal admin consoles, or any custom SaaS that benefits from authentication, RBAC, organizations, audit trails, and an admin shell from day one.
+
+This repository exists primarily to share and document those patterns in the open. If you need the full commercial product, see [ForgeCRUD](https://forgecrud.io/).
 
 ![ForgeStart product preview](public/readme/forgestart-home.png)
 
