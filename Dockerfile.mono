@@ -11,7 +11,12 @@ COPY package.json yarn.lock .yarnrc.yml ./
 RUN yarn install --immutable
 COPY . .
 RUN yarn build
-RUN cp -al /app/.next /app/.next.original
+# Trim devDeps so the mono runtime ships with production-only node_modules
+# (~500 MB savings). tsx is in dependencies so migrate/seed/realtime keep
+# working. The workspace-tools plugin provides `yarn workspaces focus`.
+RUN yarn plugin import workspace-tools \
+    && yarn workspaces focus --production \
+    && yarn cache clean
 
 FROM node:24-alpine AS mono
 WORKDIR /app
@@ -40,6 +45,12 @@ RUN apk add --no-cache \
 RUN corepack enable
 
 COPY --from=builder /app /app
+
+# Pristine .next backup used by the entrypoint to re-inject runtime URLs on
+# every start. Done HERE (inside the mono stage, not the builder) so the
+# hardlinks survive — cp -al within a single layer preserves them, while
+# COPY --from=builder duplicates files across stages.
+RUN cp -al /app/.next /app/.next.original
 
 COPY scripts/mono-entrypoint.sh /usr/local/bin/mono-entrypoint.sh
 COPY scripts/mono-init-db.sh /usr/local/bin/mono-init-db.sh
