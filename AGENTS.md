@@ -55,7 +55,7 @@ Important entry points:
 - `app/(protected)/layout.tsx` defines the authenticated shell.
 - `auth.ts` defines Auth.js behavior.
 - `proxy.ts` is the Next.js 16 middleware replacement.
-- `db/schema.ts` is the database source of truth.
+- `db/schema/` is the database source of truth — one file per table (e.g. `db/schema/users.ts`), with shared enums and the `timestamps` helper in `db/schema/_shared.ts`, all `relations()` in `db/schema/relations.ts`, and a barrel re-export in `db/schema/index.ts`. Always import via `@/db/schema`, never reach into individual files from outside the schema folder.
 - `db/seed.ts` owns base RBAC, settings and super admin data.
 - `db/reset.ts` drops both `public` and `drizzle` schemas, migrates and seeds.
 - `scripts/docker-dev.mjs` powers `yarn dev:docker`.
