@@ -12,6 +12,17 @@ This repository exists primarily to share and document those patterns in the ope
 
 ![ForgeStart product preview](public/readme/forgestart-home.png)
 
+## Live Demo
+
+Try it without installing anything: **<https://forgestart.forgecrud.io>**
+
+```
+email:    forgestart@demo.com
+password: demo123456
+```
+
+The demo is a single-container deployment (Postgres + Next.js + Realtime in one image — see [Dockerfile.mono](Dockerfile.mono)). It is reset and re-seeded periodically, so feel free to create users, organizations, roles, and test the RBAC matrix end-to-end.
+
 ## Quick Start
 
 ```bash
