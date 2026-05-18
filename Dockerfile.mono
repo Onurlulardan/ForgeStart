@@ -13,10 +13,8 @@ COPY . .
 RUN yarn build
 # Trim devDeps so the mono runtime ships with production-only node_modules
 # (~500 MB savings). tsx is in dependencies so migrate/seed/realtime keep
-# working. The workspace-tools plugin provides `yarn workspaces focus`.
-RUN yarn plugin import workspace-tools \
-    && yarn workspaces focus --production \
-    && yarn cache clean
+# working. `workspaces focus` is built-in in Yarn 4 — no plugin import needed.
+RUN yarn workspaces focus --production && yarn cache clean
 
 FROM node:24-alpine AS mono
 WORKDIR /app
